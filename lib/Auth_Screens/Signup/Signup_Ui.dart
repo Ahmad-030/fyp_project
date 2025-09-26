@@ -235,8 +235,6 @@ class SignupScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _buildTermsAndConditions(controller),
-                    const SizedBox(height: 24),
                     _buildSignupButton(controller),
                   ],
                 ),
@@ -248,79 +246,6 @@ class SignupScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTermsAndConditions(SignupController controller) {
-    return Obx(() => Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: controller.toggleAcceptTerms,
-          child: Container(
-            width: 20,
-            height: 20,
-            margin: const EdgeInsets.only(top: 2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: controller.acceptTerms.value
-                    ? controller.getActiveIndicatorColor()
-                    : Colors.white.withOpacity(0.5),
-                width: 2,
-              ),
-              color: controller.acceptTerms.value
-                  ? controller.getActiveIndicatorColor()
-                  : Colors.transparent,
-            ),
-            child: controller.acceptTerms.value
-                ? const Icon(
-              Icons.check,
-              size: 14,
-              color: Colors.white,
-            )
-                : null,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  children: [
-                    const TextSpan(text: 'I agree to the '),
-                    TextSpan(
-                      text: 'Terms and Conditions',
-                      style: controller.getLinkTextStyle().copyWith(
-                        fontSize: 13,
-                        decoration: TextDecoration.underline,
-                        decorationColor: controller.getActiveIndicatorColor(),
-                      ),
-                      // You can add onTap here for navigation
-                    ),
-                    const TextSpan(text: ' and '),
-                    TextSpan(
-                      text: 'Privacy Policy',
-                      style: controller.getLinkTextStyle().copyWith(
-                        fontSize: 13,
-                        decoration: TextDecoration.underline,
-                        decorationColor: controller.getActiveIndicatorColor(),
-                      ),
-                      // You can add onTap here for navigation
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ));
-  }
 
   Widget _buildSignupButton(SignupController controller) {
     return Obx(() => CustomGradientButton(
