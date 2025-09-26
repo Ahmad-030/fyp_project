@@ -37,7 +37,7 @@ class CustomGradientButton extends StatelessWidget {
     this.iconSize = 20.0,
     this.spaceBetween = 8.0,
     this.enabled = true,
-    this.showIcon = true,
+    this.showIcon = true, SizedBox? child,
   }) : super(key: key);
 
   @override

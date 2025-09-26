@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fyp_project/Auth_Screens/Login/Login_Ui.dart';
 import 'package:get/get.dart';
 
 class OnboardingController extends GetxController with GetTickerProviderStateMixin {
@@ -110,7 +111,7 @@ class OnboardingController extends GetxController with GetTickerProviderStateMix
       _restartAnimations();
     } else {
       // Navigate to home or login screen
-      Get.offAllNamed('/home'); // Replace with your route
+      Get.off(() => LoginScreen());// Replace with your route
     }
     _updateLastPageStatus();
   }
@@ -129,7 +130,7 @@ class OnboardingController extends GetxController with GetTickerProviderStateMix
       _restartAnimations();
     } else {
       // If already on last page, go to home
-      Get.offAllNamed('/home'); // Replace with your route
+      Get.off(() => LoginScreen()); // Replace with your route
     }
   }
 
