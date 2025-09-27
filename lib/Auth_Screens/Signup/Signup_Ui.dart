@@ -11,7 +11,12 @@ class SignupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SignupController controller = Get.put(SignupController());
+    // Ensure any existing controller is disposed first
+    if (Get.isRegistered<SignupController>()) {
+      Get.delete<SignupController>();
+    }
+
+    final SignupController controller = Get.put(SignupController(), permanent: false);
 
     return Scaffold(
       body: Container(
@@ -50,14 +55,21 @@ class SignupScreen extends StatelessWidget {
 
   Widget _buildHeader(SignupController controller) {
     return AnimatedBuilder(
-      animation: controller.animationController,
+      animation: controller.animationController ??
+          AnimationController(duration: Duration.zero, vsync: Navigator.of(Get.context!)),
       builder: (context, child) {
-        return FadeTransition(
-          opacity: controller.fadeAnimation,
-          child: SlideTransition(
-            position: controller.slideAnimation,
+        // Safe animation values with fallbacks
+        final fadeValue = controller.fadeAnimation?.value ?? 1.0;
+        final scaleValue = controller.scaleAnimation?.value ?? 1.0;
+        final slideOffset = controller.slideAnimation?.value ?? Offset.zero;
+
+        return Opacity(
+          opacity: fadeValue,
+          child: Transform.translate(
+            offset: Offset(slideOffset.dx * MediaQuery.of(context).size.width,
+                slideOffset.dy * 100),
             child: Transform.scale(
-              scale: controller.scaleAnimation.value,
+              scale: scaleValue,
               child: Column(
                 children: [
                   Container(
@@ -119,12 +131,17 @@ class SignupScreen extends StatelessWidget {
 
   Widget _buildSignupForm(SignupController controller) {
     return AnimatedBuilder(
-      animation: controller.formController,
+      animation: controller.formController ??
+          AnimationController(duration: Duration.zero, vsync: Navigator.of(Get.context!)),
       builder: (context, child) {
+        // Safe animation values with fallbacks
+        final formSlideValue = controller.formSlideAnimation?.value ?? 0.0;
+        final fadeValue = controller.fadeAnimation?.value ?? 1.0;
+
         return Transform.translate(
-          offset: Offset(0, controller.formSlideAnimation.value),
-          child: FadeTransition(
-            opacity: controller.fadeAnimation,
+          offset: Offset(0, formSlideValue),
+          child: Opacity(
+            opacity: fadeValue,
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -246,7 +263,6 @@ class SignupScreen extends StatelessWidget {
     );
   }
 
-
   Widget _buildSignupButton(SignupController controller) {
     return Obx(() => CustomGradientButton(
       onPressed: controller.isLoading.value ? null : controller.signUp,
@@ -270,10 +286,14 @@ class SignupScreen extends StatelessWidget {
 
   Widget _buildFooter(SignupController controller) {
     return AnimatedBuilder(
-      animation: controller.fadeAnimation,
+      animation: controller.animationController ??
+          AnimationController(duration: Duration.zero, vsync: Navigator.of(Get.context!)),
       builder: (context, child) {
-        return FadeTransition(
-          opacity: controller.fadeAnimation,
+        // Safe animation values with fallbacks
+        final fadeValue = controller.fadeAnimation?.value ?? 1.0;
+
+        return Opacity(
+          opacity: fadeValue,
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
