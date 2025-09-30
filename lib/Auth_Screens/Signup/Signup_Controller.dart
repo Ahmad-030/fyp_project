@@ -175,7 +175,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
 
   Color getSecondaryButtonColor() => const Color(0xFF87CEEB);
 
-  Color getActiveIndicatorColor() => Colors.transparent;
+   Color getActiveIndicatorColor() => const Color(0xFF06B6D4);
 
   TextStyle getTitleTextStyle() {
     return const TextStyle(
