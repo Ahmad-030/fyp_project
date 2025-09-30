@@ -175,7 +175,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
 
   Color getSecondaryButtonColor() => const Color(0xFF87CEEB);
 
-  Color getActiveIndicatorColor() => const Color(0xFF87CEEB);
+  Color getActiveIndicatorColor() => Colors.transparent;
 
   TextStyle getTitleTextStyle() {
     return const TextStyle(
@@ -306,7 +306,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
     Get.snackbar(
       title,
       message,
-      backgroundColor: const Color(0xFF10B981),
+      backgroundColor: Colors.transparent,
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 4),
@@ -325,7 +325,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
     Get.snackbar(
       title,
       message,
-      backgroundColor: const Color(0xFFEF4444),
+      backgroundColor: Colors.transparent,
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 5),
@@ -344,7 +344,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
     Get.snackbar(
       title,
       message,
-      backgroundColor: const Color(0xFFF59E0B),
+      backgroundColor: Colors.transparent,
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 4),
@@ -382,7 +382,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
     Get.snackbar(
       'Processing',
       message,
-      backgroundColor: const Color(0xFF6B7280),
+      backgroundColor: Colors.transparent,
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 2),
