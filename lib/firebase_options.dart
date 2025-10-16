@@ -41,48 +41,52 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAmdzceMXvHxH750mT-Tnj7VHFkt4h7aqY',
-    appId: '1:50058070959:web:cb4b9ec5989e07ffe03d5a',
-    messagingSenderId: '50058070959',
-    projectId: 'fyp-project-1ec07',
-    authDomain: 'fyp-project-1ec07.firebaseapp.com',
-    storageBucket: 'fyp-project-1ec07.firebasestorage.app',
-    measurementId: 'G-CQ98DGTFB0',
+    apiKey: 'AIzaSyB3FC_7zyKijoiFN2-CHBp0epL3mi7RHx8',
+    appId: '1:271345142761:web:732cc30725426079865978',
+    messagingSenderId: '271345142761',
+    projectId: 'childsafetyesp32-4f526',
+    authDomain: 'childsafetyesp32-4f526.firebaseapp.com',
+    databaseURL: 'https://childsafetyesp32-4f526-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'childsafetyesp32-4f526.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCYSImznn29xd0S1ElY3792iZD_ozatix4',
-    appId: '1:50058070959:android:c1a97b8e7636a9e1e03d5a',
-    messagingSenderId: '50058070959',
-    projectId: 'fyp-project-1ec07',
-    storageBucket: 'fyp-project-1ec07.firebasestorage.app',
+    apiKey: 'AIzaSyByI-kdptS6Ow_CN8ztoodfwR4bsv9yVy0',
+    appId: '1:271345142761:android:2b479350b6c639e2865978',
+    messagingSenderId: '271345142761',
+    projectId: 'childsafetyesp32-4f526',
+    databaseURL: 'https://childsafetyesp32-4f526-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'childsafetyesp32-4f526.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCnmVRQC1l63dTWd3myEzUT5wvKTJaUdYU',
-    appId: '1:50058070959:ios:c2106d1fd7bdaf79e03d5a',
-    messagingSenderId: '50058070959',
-    projectId: 'fyp-project-1ec07',
-    storageBucket: 'fyp-project-1ec07.firebasestorage.app',
+    apiKey: 'AIzaSyCbuJ08Wj4jNCBEuob_y9Ve5iwLn5ZSVrM',
+    appId: '1:271345142761:ios:aa1a76178fb1363c865978',
+    messagingSenderId: '271345142761',
+    projectId: 'childsafetyesp32-4f526',
+    databaseURL: 'https://childsafetyesp32-4f526-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'childsafetyesp32-4f526.firebasestorage.app',
     iosBundleId: 'com.example.fypProject',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCnmVRQC1l63dTWd3myEzUT5wvKTJaUdYU',
-    appId: '1:50058070959:ios:c2106d1fd7bdaf79e03d5a',
-    messagingSenderId: '50058070959',
-    projectId: 'fyp-project-1ec07',
-    storageBucket: 'fyp-project-1ec07.firebasestorage.app',
+    apiKey: 'AIzaSyCbuJ08Wj4jNCBEuob_y9Ve5iwLn5ZSVrM',
+    appId: '1:271345142761:ios:aa1a76178fb1363c865978',
+    messagingSenderId: '271345142761',
+    projectId: 'childsafetyesp32-4f526',
+    databaseURL: 'https://childsafetyesp32-4f526-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'childsafetyesp32-4f526.firebasestorage.app',
     iosBundleId: 'com.example.fypProject',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAmdzceMXvHxH750mT-Tnj7VHFkt4h7aqY',
-    appId: '1:50058070959:web:8b357fe7dbdea6a2e03d5a',
-    messagingSenderId: '50058070959',
-    projectId: 'fyp-project-1ec07',
-    authDomain: 'fyp-project-1ec07.firebaseapp.com',
-    storageBucket: 'fyp-project-1ec07.firebasestorage.app',
-    measurementId: 'G-0H9XH1Y67Z',
+    apiKey: 'AIzaSyB3FC_7zyKijoiFN2-CHBp0epL3mi7RHx8',
+    appId: '1:271345142761:web:823372c108c16bda865978',
+    messagingSenderId: '271345142761',
+    projectId: 'childsafetyesp32-4f526',
+    authDomain: 'childsafetyesp32-4f526.firebaseapp.com',
+    databaseURL: 'https://childsafetyesp32-4f526-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'childsafetyesp32-4f526.firebasestorage.app',
   );
+
 }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart'; // Firebase Core import
+import 'Services/Notification_service.dart';
 import 'Splash_Screen/SplashScreen_ui.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Initialize Firebase
+  await Firebase.initializeApp(); // Initialize Firebase\
+  await NotificationService.initializeNotifications();
   runApp(MyApp());
 }
 

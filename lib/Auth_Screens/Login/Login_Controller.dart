@@ -9,6 +9,7 @@ import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../HomeScreen/SafetyMonitoring_ui.dart';
 import 'Login_Ui.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
@@ -361,7 +362,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     );
   }
 
-  // Enhanced Firebase Auth login method - REMOVED EMAIL VERIFICATION CHECK
+  // Enhanced Firebase Auth login method
   Future<void> login() async {
     print('\n========= LOGIN PROCESS STARTED =========');
 
@@ -416,7 +417,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
         await user.reload();
         print('User reloaded successfully');
 
-        // REMOVED EMAIL VERIFICATION CHECK - Users can login regardless of verification status
         print('Updating user data...');
 
         // Update user data in Firebase Realtime Database
@@ -445,26 +445,23 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
         }
 
         // Navigate to home screen with improved error handling
-        print('Navigating to home screen...');
+        print('Navigating to Safety Monitoring screen...');
         await Future.delayed(const Duration(seconds: 1)); // Reduced delay
 
         try {
-          // Ensure we're still registered before navigation
+          // Navigate to Safety Monitoring screen
           if (Get.isRegistered<LoginController>()) {
             print('Controller still registered, proceeding with navigation...');
-
-            // Use offAllNamed for more reliable navigation
-            Get.offAll(() => HomeScreen());
-
-            print('Navigation to HomeScreen completed successfully');
+            Get.offAll(() => const ChildSafetyMonitoringScreen());
+            print('Navigation to SafetyMonitoringScreen completed successfully');
           } else {
             print('Controller no longer registered, forcing navigation...');
-            Get.offAll(() => HomeScreen());
+            Get.offAll(() => const ChildSafetyMonitoringScreen());
           }
         } catch (navError) {
           print('Navigation error: $navError');
           // Force navigation as backup
-          Get.offAll(() => HomeScreen());
+          Get.offAll(() => const ChildSafetyMonitoringScreen());
         }
 
         print('User logged in successfully: ${user.uid}');
@@ -542,7 +539,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       // Update last login time and other login-related data
       await userRef.update({
         'lastLogin': ServerValue.timestamp,
-        'isEmailVerified': true, // Set to true since we're not checking verification
+        'isEmailVerified': true,
         'lastLoginDevice': 'mobile',
       });
 
@@ -635,7 +632,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   // Get current user
   User? get currentUser => _auth.currentUser;
 
-  // Auto login check - REMOVED EMAIL VERIFICATION CHECK
+  // Auto login check
   Future<void> checkAutoLogin() async {
     try {
       print('Checking auto login status...');
@@ -644,14 +641,13 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
         final user = currentUser!;
         print('User found: ${user.uid}');
 
-        // REMOVED EMAIL VERIFICATION CHECK - Users can auto-login regardless of verification status
         print('User authenticated, updating login data and navigating to home...');
 
         // Update login data
         await _updateUserLoginData(user);
 
-        // Navigate to home
-        Get.offAll(() => HomeScreen());
+        // Navigate to Safety Monitoring screen
+        Get.offAll(() => const ChildSafetyMonitoringScreen());
       } else {
         print('No user signed in');
       }
