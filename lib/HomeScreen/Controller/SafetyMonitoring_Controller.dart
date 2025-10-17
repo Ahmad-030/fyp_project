@@ -13,8 +13,12 @@ class SafetyMonitoringController extends GetxController {
   var soundAlerts = <Map<String, dynamic>>[].obs;
   var isLoading = true.obs;
   var lastRefreshTime = DateTime.now().obs;
-  var debugLogs = <String>[].obs; // Store debug logs for UI display
+  var debugLogs = <String>[].obs;
   var connectionStatus = 'Connecting...'.obs;
+
+  // ✅ NEW: Firebase server timestamp for accurate sync
+  var firebaseLastUpdate = Rx<DateTime?>(null);
+  var serverTime = DateTime.now().obs;
 
   late Set<String> _notifiedAlertIds;
   late Map<String, int> _lastSeenTimestamps;
@@ -27,6 +31,7 @@ class SafetyMonitoringController extends GetxController {
     _lastSeenTimestamps = {};
     _addLog('🚀 Controller initialized');
     _initializeNotifications();
+    _syncServerTime();
   }
 
   void _addLog(String message) {
@@ -35,9 +40,27 @@ class SafetyMonitoringController extends GetxController {
     debugLogs.add(logMessage);
     print(logMessage);
 
-    // Keep only last 100 logs
     if (debugLogs.length > 100) {
       debugLogs.removeAt(0);
+    }
+  }
+
+  // ✅ NEW: Sync with Firebase server time
+  Future<void> _syncServerTime() async {
+    try {
+      _addLog('⏰ Syncing with Firebase server time...');
+
+      // Get server timestamp reference
+      final serverRef = _database.ref().child('.info/serverTimeOffset');
+      final event = await serverRef.once();
+
+      if (event.snapshot.exists) {
+        final offset = (event.snapshot.value as num?)?.toInt() ?? 0;
+        serverTime.value = DateTime.now().add(Duration(milliseconds: offset));
+        _addLog('✅ Server time synced (offset: ${offset}ms)');
+      }
+    } catch (e) {
+      _addLog('⚠️ Server time sync error: $e');
     }
   }
 
@@ -81,6 +104,9 @@ class SafetyMonitoringController extends GetxController {
             proximityAlerts.clear();
             soundAlerts.clear();
 
+            // Track the latest Firebase timestamp
+            int latestTimestamp = 0;
+
             // Parse PROXIMITY alerts
             if (data.containsKey('PROXIMITY')) {
               _addLog('');
@@ -90,9 +116,16 @@ class SafetyMonitoringController extends GetxController {
 
               proxData.forEach((key, value) {
                 if (value is Map) {
+                  final alertMap = Map<String, dynamic>.from(value);
+                  final timestamp = _normalizeTimestamp(alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0);
+
+                  if (timestamp > latestTimestamp) {
+                    latestTimestamp = timestamp;
+                  }
+
                   _parseAndProcessAlert(
                     key: key,
-                    alertMap: value,
+                    alertMap: alertMap,
                     alertType: 'PROXIMITY',
                     isProximity: true,
                   );
@@ -111,9 +144,16 @@ class SafetyMonitoringController extends GetxController {
 
               soundData.forEach((key, value) {
                 if (value is Map) {
+                  final alertMap = Map<String, dynamic>.from(value);
+                  final timestamp = _normalizeTimestamp(alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0);
+
+                  if (timestamp > latestTimestamp) {
+                    latestTimestamp = timestamp;
+                  }
+
                   _parseAndProcessAlert(
                     key: key,
-                    alertMap: value,
+                    alertMap: alertMap,
                     alertType: 'SOUND_HAZARD',
                     isProximity: false,
                   );
@@ -121,6 +161,12 @@ class SafetyMonitoringController extends GetxController {
               });
             } else {
               _addLog('🔊 No SOUND_HAZARD alerts found');
+            }
+
+            // ✅ Update Firebase last update from latest alert
+            if (latestTimestamp > 0) {
+              firebaseLastUpdate.value = DateTime.fromMillisecondsSinceEpoch(latestTimestamp);
+              _addLog('⏱️ Latest Firebase Update: ${firebaseLastUpdate.value}');
             }
 
             // Summary
@@ -133,6 +179,7 @@ class SafetyMonitoringController extends GetxController {
           } else {
             _addLog('⚠️ No data in database');
             connectionStatus.value = '⚠️ No data';
+            firebaseLastUpdate.value = null;
           }
 
           isLoading.value = false;
@@ -237,6 +284,7 @@ class SafetyMonitoringController extends GetxController {
     return timestamp;
   }
 
+  // ✅ IMPROVED: Format timestamp with relative and absolute time
   String formatTimestamp(int timestamp) {
     if (timestamp == 0) return 'Unknown';
 
@@ -281,20 +329,54 @@ class SafetyMonitoringController extends GetxController {
     }
   }
 
+  // ✅ NEW: Get formatted Firebase last update time
+  String getFirebaseLastUpdateFormatted() {
+    if (firebaseLastUpdate.value == null) {
+      return 'No updates yet';
+    }
+
+    final lastUpdate = firebaseLastUpdate.value!;
+    final now = DateTime.now();
+    final diff = now.difference(lastUpdate);
+
+    if (diff.inSeconds <= 0) {
+      return 'Just now';
+    }
+    if (diff.inSeconds < 60) {
+      return '${diff.inSeconds}s ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inHours < 24) {
+      return '${diff.inHours}h ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    return 'Recently';
+  }
+
+  // ✅ NEW: Get connection status based on Firebase data
+  String getConnectionStatusDisplay() {
+    if (connectionStatus.value.contains('Error')) {
+      return '🔴 Connection Failed';
+    }
+    if (connectionStatus.value.contains('No data')) {
+      return '⚠️ No Data';
+    }
+    if (firebaseLastUpdate.value != null) {
+      return '🟢 Connected';
+    }
+    return '🟡 Connecting...';
+  }
+
   void _handleAlertNotification({
     required String alertId,
     required int timestamp,
     required String message,
     required bool isProximity,
   }) {
-    // ✅ Only send notification if BOTH conditions are met:
-    // 1. We've seen this alert before AND timestamp changed (new event)
-    // 2. OR it's the first time AND timestamp is recent
-
     if (_lastSeenTimestamps.containsKey(alertId)) {
       final lastSeenTimestamp = _lastSeenTimestamps[alertId]!;
 
-      // ✅ Check if timestamp CHANGED (indicating new alert)
       if (timestamp != lastSeenTimestamp) {
         _addLog('      🔔 NEW alert detected');
         _addLog('      Changed: $lastSeenTimestamp → $timestamp');
@@ -306,7 +388,6 @@ class SafetyMonitoringController extends GetxController {
         _addLog('      ℹ️ Duplicate (same timestamp - no notification)');
       }
     } else {
-      // First time seeing this alert - record but DON'T notify
       _addLog('      📝 First occurrence (recording - no notification yet)');
       _addLog('      Will notify when lastUpdate changes');
       _lastSeenTimestamps[alertId] = timestamp;

@@ -131,7 +131,7 @@ class SplashScreen extends StatelessWidget {
             ).createShader(bounds);
           },
           child: Text(
-            'Robotic',
+            'Child Safety',
             style: TextStyle(
               fontSize: 52,
               fontWeight: FontWeight.w900,

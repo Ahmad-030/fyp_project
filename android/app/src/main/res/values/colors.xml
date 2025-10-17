@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ✅ Notification Colors -->
+    <color name="notification_color">#4A90C2</color>
+
+    <!-- ✅ Primary Brand Colors -->
+    <color name="primary_dark">#0F2A4A</color>
+    <color name="primary_medium">#1E4A6B</color>
+    <color name="primary_light">#2D6A9A</color>
+    <color name="primary_accent">#4A90C2</color>
+    <color name="secondary_accent">#87CEEB</color>
+
+    <!-- ✅ Alert Colors -->
+    <color name="warning_red">#FF6B6B</color>
+    <color name="warning_orange">#FFA500</color>
+    <color name="success_green">#059669</color>
+
+    <!-- ✅ Default Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+</resources>

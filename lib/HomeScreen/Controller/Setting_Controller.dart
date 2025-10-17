@@ -18,9 +18,10 @@ class SettingsController extends GetxController {
   var fullName = ''.obs;
   var phoneNumber = ''.obs;
 
-  // Real-time monitoring status
+  // ✅ Real-time monitoring status with Firebase sync
   var connectionStatus = RxString('🟢 Connected');
   var lastRefreshTime = Rx<DateTime>(DateTime.now());
+  var firebaseLastUpdate = Rx<DateTime?>(null);
   var proximityAlerts = RxList<Map<String, dynamic>>();
   var soundAlerts = RxList<Map<String, dynamic>>();
 
@@ -73,7 +74,7 @@ class SettingsController extends GetxController {
     }
   }
 
-  // ✅ NEW: Setup real-time monitoring
+  // ✅ Setup real-time monitoring with Firebase timestamp tracking
   void _setupRealtimeMonitoring() {
     try {
       print('🔗 Setting up real-time monitoring...');
@@ -88,6 +89,7 @@ class SettingsController extends GetxController {
           soundAlerts.clear();
 
           final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+          int latestTimestamp = 0;
 
           // Parse PROXIMITY alerts
           if (data.containsKey('PROXIMITY')) {
@@ -95,11 +97,17 @@ class SettingsController extends GetxController {
             proxData.forEach((key, value) {
               if (value is Map) {
                 final alertMap = Map<String, dynamic>.from(value);
+                final timestamp = _normalizeTimestamp(alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0);
+
+                if (timestamp > latestTimestamp) {
+                  latestTimestamp = timestamp;
+                }
+
                 proximityAlerts.add({
                   'id': key,
                   'message': alertMap['message'] ?? 'Proximity Alert',
                   'status': alertMap['status'] ?? 'ACTIVE',
-                  'timestamp': alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0,
+                  'timestamp': timestamp,
                 });
               }
             });
@@ -111,20 +119,35 @@ class SettingsController extends GetxController {
             soundData.forEach((key, value) {
               if (value is Map) {
                 final alertMap = Map<String, dynamic>.from(value);
+                final timestamp = _normalizeTimestamp(alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0);
+
+                if (timestamp > latestTimestamp) {
+                  latestTimestamp = timestamp;
+                }
+
                 soundAlerts.add({
                   'id': key,
                   'message': alertMap['message'] ?? 'Sound Alert',
                   'status': alertMap['status'] ?? 'ACTIVE',
-                  'timestamp': alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0,
+                  'timestamp': timestamp,
                 });
               }
             });
+          }
+
+          // ✅ Update Firebase last update from latest alert
+          if (latestTimestamp > 0) {
+            firebaseLastUpdate.value = DateTime.fromMillisecondsSinceEpoch(latestTimestamp);
+            print('⏱️ Latest Firebase Update: ${firebaseLastUpdate.value}');
+          } else {
+            firebaseLastUpdate.value = null;
           }
 
           print('✅ Real-time data updated');
         } else {
           print('⚠️ No alerts data found');
           connectionStatus.value = '⚠️ No data';
+          firebaseLastUpdate.value = null;
         }
       }, onError: (error) {
         print('❌ Real-time listener error: $error');
@@ -134,6 +157,58 @@ class SettingsController extends GetxController {
       print('❌ Error setting up monitoring: $e');
       connectionStatus.value = '🔴 Failed';
     }
+  }
+
+  // ✅ Normalize timestamp from Firebase
+  int _normalizeTimestamp(dynamic rawTimestamp) {
+    if (rawTimestamp == null) return 0;
+
+    int timestamp = 0;
+
+    if (rawTimestamp is int) {
+      timestamp = rawTimestamp;
+    } else if (rawTimestamp is double) {
+      timestamp = rawTimestamp.toInt();
+    } else if (rawTimestamp is String) {
+      timestamp = int.tryParse(rawTimestamp) ?? 0;
+    }
+
+    // Smart conversion for milliseconds vs seconds
+    if (timestamp > 0 && timestamp < 10000000000) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final diff = (now - timestamp).abs();
+
+      if (diff > 3155760000000) {
+        timestamp = timestamp * 1000;
+      }
+    }
+
+    return timestamp;
+  }
+
+  // ✅ Get formatted Firebase last update
+  String getFirebaseLastUpdateFormatted() {
+    if (firebaseLastUpdate.value == null) {
+      return 'No updates yet';
+    }
+
+    final lastUpdate = firebaseLastUpdate.value!;
+    final now = DateTime.now();
+    final diff = now.difference(lastUpdate);
+
+    if (diff.inSeconds <= 0) {
+      return '${diff.inSeconds}s ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inSeconds < 60) {
+      return '${diff.inSeconds}s ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inHours < 24) {
+      return '${diff.inHours}h ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    return '${diff.inDays}d ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
   }
 
   // Test proximity notification

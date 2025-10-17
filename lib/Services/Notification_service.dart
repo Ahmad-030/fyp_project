@@ -12,7 +12,7 @@ class NotificationService {
     try {
       print('📱 Initializing notification service...');
 
-      // Android initialization
+      // ✅ Android initialization with color settings
       const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -52,6 +52,7 @@ class NotificationService {
   }
 
   // ✅ Background notification handler
+  @pragma('vm:entry-point')
   static void notificationTapBackground(NotificationResponse notificationResponse) {
     print('🎯 Background notification tapped: ${notificationResponse.payload}');
   }
@@ -113,7 +114,7 @@ class NotificationService {
     }
   }
 
-  // Show proximity alert notification - WORKS IN BACKGROUND
+  // ✅ IMPROVED: Show proximity alert notification with color dot
   static Future<void> showProximityAlert({
     required String message,
     required String alertId,
@@ -131,12 +132,20 @@ class NotificationService {
         playSound: true,
         enableVibration: true,
         enableLights: true,
-        fullScreenIntent: true, // ✅ Show on lock screen
-        color: Color(0xFFFF6B6B),
+        fullScreenIntent: true,
+        // ✅ KEY: Set color using Android color resource
+        color: Color(0xFF4A90C2),  // Sky Blue - matches colors.xml
+        colorized: true,            // ✅ Makes color more visible
         icon: '@mipmap/ic_launcher',
         ongoing: false,
         autoCancel: true,
         showWhen: true,
+        // ✅ Add style for better visual appearance
+        styleInformation: const BigTextStyleInformation(
+          'Proximity Hazard Detected!',
+          contentTitle: '🚨 Safety Alert',
+          summaryText: 'Tap to view details',
+        ),
       );
 
       const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -144,7 +153,9 @@ class NotificationService {
         presentBadge: true,
         presentSound: true,
         sound: 'default',
-        interruptionLevel: InterruptionLevel.timeSensitive, // ✅ Critical alert
+        interruptionLevel: InterruptionLevel.timeSensitive,
+        // ✅ iOS color support
+        threadIdentifier: 'proximity_alerts',
       );
 
       const NotificationDetails notificationDetails = NotificationDetails(
@@ -167,7 +178,7 @@ class NotificationService {
     }
   }
 
-  // Show sound hazard notification - WORKS IN BACKGROUND
+  // ✅ IMPROVED: Show sound hazard notification with color dot
   static Future<void> showSoundHazardAlert({
     required String message,
     required String alertId,
@@ -185,12 +196,20 @@ class NotificationService {
         playSound: true,
         enableVibration: true,
         enableLights: true,
-        fullScreenIntent: true, // ✅ Show on lock screen
-        color: Color(0xFFFFA500),
+        fullScreenIntent: true,
+        // ✅ KEY: Set color using Android color resource
+        color: Color(0xFFFFA500),  // Orange - warning color
+        colorized: true,            // ✅ Makes color more visible
         icon: '@mipmap/ic_launcher',
         ongoing: false,
         autoCancel: true,
         showWhen: true,
+        // ✅ Add style for better visual appearance
+        styleInformation: const BigTextStyleInformation(
+          'Sound Hazard Detected!',
+          contentTitle: '🔊 Safety Alert',
+          summaryText: 'Tap to view details',
+        ),
       );
 
       const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -198,7 +217,9 @@ class NotificationService {
         presentBadge: true,
         presentSound: true,
         sound: 'default',
-        interruptionLevel: InterruptionLevel.timeSensitive, // ✅ Critical alert
+        interruptionLevel: InterruptionLevel.timeSensitive,
+        // ✅ iOS color support
+        threadIdentifier: 'sound_hazard_alerts',
       );
 
       const NotificationDetails notificationDetails = NotificationDetails(
@@ -208,7 +229,7 @@ class NotificationService {
 
       await flutterLocalNotificationsPlugin.show(
         alertId.hashCode,
-        '🔊 Sound Hazard Detected',
+        '🔊 Sound Hazard Alert',
         message,
         notificationDetails,
         payload: alertId,

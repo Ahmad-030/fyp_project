@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'Controller/Setting_Controller.dart';
-import 'Controller/SafetyMonitoring_Controller.dart';
 import '../Theme/app_theme.dart';
+import 'Controller/Setting_Controller.dart' as controller;
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -13,8 +13,6 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final SettingsController controller = Get.put(SettingsController());
-    // Get the SafetyMonitoringController to access real-time data
-    final SafetyMonitoringController monitoringController = Get.find<SafetyMonitoringController>();
 
     return Scaffold(
       body: Container(
@@ -37,8 +35,8 @@ class SettingsScreen extends StatelessWidget {
                   _buildHeader(),
                   const SizedBox(height: 32),
 
-                  // ✅ NEW: Real-time Last Update Section
-                  _buildRealtimeUpdateSection(monitoringController),
+                  // ✅ UPDATED: Real-time Last Update Section with Firebase Data
+                  _buildRealtimeUpdateSection(controller),
                   const SizedBox(height: 24),
 
                   _buildUserSection(controller),
@@ -98,8 +96,8 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  // ✅ NEW: Real-time Update Section
-  Widget _buildRealtimeUpdateSection(SafetyMonitoringController controller) {
+  // ✅ UPDATED: Real-time Update Section with Firebase Last Update
+  Widget _buildRealtimeUpdateSection(SettingsController controller) {
     return Obx(() => Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -148,7 +146,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Connection Status
+          // ✅ Connection Status
           Row(
             children: [
               const Icon(
@@ -176,9 +174,9 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          // Last Update Time
+          // ✅ UPDATED: Firebase Last Update Time
           Row(
             children: [
               const Icon(
@@ -192,11 +190,44 @@ class SettingsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Last Update',
+                      'Firebase Last Update',
                       style: AppTheme.caption,
                     ),
                     Text(
-                      _formatLastUpdate(controller.lastRefreshTime.value),
+                      controller.getFirebaseLastUpdateFormatted(),
+                      style: AppTheme.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: controller.firebaseLastUpdate.value != null
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ✅ Local Refresh Time
+          Row(
+            children: [
+              const Icon(
+                Icons.refresh,
+                size: 12,
+                color: AppTheme.secondaryAccent,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Local Refresh',
+                      style: AppTheme.caption,
+                    ),
+                    Text(
+                      _formatLocalRefreshTime(controller.lastRefreshTime.value),
                       style: AppTheme.bodyLarge.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -206,9 +237,9 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          // Alert Counts
+          // ✅ Alert Counts
           Row(
             children: [
               Expanded(
@@ -271,18 +302,19 @@ class SettingsScreen extends StatelessWidget {
     ));
   }
 
-  String _formatLastUpdate(DateTime lastUpdate) {
+  // ✅ Helper function to format local refresh time
+  String _formatLocalRefreshTime(DateTime lastRefresh) {
     final now = DateTime.now();
-    final diff = now.difference(lastUpdate);
+    final diff = now.difference(lastRefresh);
 
     if (diff.inSeconds < 60) {
-      return '${diff.inSeconds}s ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+      return '${diff.inSeconds}s ago • ${lastRefresh.hour.toString().padLeft(2, '0')}:${lastRefresh.minute.toString().padLeft(2, '0')}';
     }
     if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+      return '${diff.inMinutes}m ago • ${lastRefresh.hour.toString().padLeft(2, '0')}:${lastRefresh.minute.toString().padLeft(2, '0')}';
     }
     if (diff.inHours < 24) {
-      return '${diff.inHours}h ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+      return '${diff.inHours}h ago • ${lastRefresh.hour.toString().padLeft(2, '0')}:${lastRefresh.minute.toString().padLeft(2, '0')}';
     }
     return 'Recently';
   }
