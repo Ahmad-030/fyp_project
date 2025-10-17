@@ -3,7 +3,6 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fyp_project/Auth_Screens/Forget/Forget_UI.dart';
 import 'package:fyp_project/Auth_Screens/Signup/Signup_Ui.dart';
-import 'package:fyp_project/HomeScreen_ui.dart';
 import 'package:get/get.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';

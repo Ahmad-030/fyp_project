@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import '../Theme/App_theme.dart';
 import 'Controller/SafetyMonitoring_Controller.dart';
 import 'Setting.dart';
 
@@ -18,7 +18,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: controller.getBackgroundGradientColors(),
+            colors: AppTheme.backgroundGradient,
             stops: const [0.0, 0.3, 0.7, 1.0],
           ),
         ),
@@ -76,18 +76,12 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Safety Monitor',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: 1.5,
-              ),
+              style: AppTheme.headingXL,
             ),
             InkWell(
               onTap: () {
-                // Navigate to Settings Screen
                 Get.to(() => const SettingsScreen());
               },
               borderRadius: BorderRadius.circular(50),
@@ -96,19 +90,16 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF87CEEB).withOpacity(0.2),
-                      const Color(0xFF4169E1).withOpacity(0.1),
-                    ],
+                    colors: AppTheme.cardGradient,
                   ),
                   border: Border.all(
-                    color: const Color(0xFF87CEEB).withOpacity(0.3),
+                    color: AppTheme.secondaryAccent.withOpacity(0.3),
                     width: 1,
                   ),
                 ),
                 child: const Icon(
                   Icons.security,
-                  color: Color(0xFF87CEEB),
+                  color: AppTheme.secondaryAccent,
                   size: 24,
                 ),
               ),
@@ -118,12 +109,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Real-time child safety alerts with notifications',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withOpacity(0.7),
-            fontWeight: FontWeight.w400,
-            letterSpacing: 0.5,
-          ),
+          style: AppTheme.subtitle,
         ),
       ],
     );
@@ -137,7 +123,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
             title: 'Proximity',
             count: controller.proximityAlerts.length,
             icon: Icons.location_on_rounded,
-            color: const Color(0xFFFF6B6B),
+            color: AppTheme.warningRed,
           ),
         ),
         const SizedBox(width: 12),
@@ -146,7 +132,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
             title: 'Sound Hazard',
             count: controller.soundAlerts.length,
             icon: Icons.volume_up_rounded,
-            color: const Color(0xFFFFA500),
+            color: AppTheme.warningOrange,
           ),
         ),
       ],
@@ -194,20 +180,14 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '$count',
-            style: const TextStyle(
+            style: AppTheme.headingLarge.copyWith(
               fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withOpacity(0.7),
-              fontWeight: FontWeight.w500,
-            ),
+            style: AppTheme.bodySmall,
           ),
         ],
       ),
@@ -224,22 +204,18 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFFF6B6B).withOpacity(0.2),
+                color: AppTheme.warningRed.withOpacity(0.2),
               ),
               child: const Icon(
                 Icons.location_on_rounded,
-                color: Color(0xFFFF6B6B),
+                color: AppTheme.warningRed,
                 size: 20,
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'Proximity Alerts',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
+              style: AppTheme.headingMedium,
             ),
           ],
         ),
@@ -252,11 +228,11 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
             alert: alert,
             controller: controller,
             colors: [
-              const Color(0xFFFF6B6B).withOpacity(0.1),
-              const Color(0xFFFF8E72).withOpacity(0.1),
+              AppTheme.warningRed.withOpacity(0.1),
+              AppTheme.warningRed.withOpacity(0.05),
             ],
             icon: Icons.location_on_rounded,
-            iconColor: const Color(0xFFFF6B6B),
+            iconColor: AppTheme.warningRed,
           ))
               .toList(),
         ),
@@ -274,22 +250,18 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFFFA500).withOpacity(0.2),
+                color: AppTheme.warningOrange.withOpacity(0.2),
               ),
               child: const Icon(
                 Icons.volume_up_rounded,
-                color: Color(0xFFFFA500),
+                color: AppTheme.warningOrange,
                 size: 20,
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'Sound Hazard Alerts',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
+              style: AppTheme.headingMedium,
             ),
           ],
         ),
@@ -302,11 +274,11 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
             alert: alert,
             controller: controller,
             colors: [
-              const Color(0xFFFFA500).withOpacity(0.1),
-              const Color(0xFFFFB84D).withOpacity(0.1),
+              AppTheme.warningOrange.withOpacity(0.1),
+              AppTheme.warningOrange.withOpacity(0.05),
             ],
             icon: Icons.volume_up_rounded,
-            iconColor: const Color(0xFFFFA500),
+            iconColor: AppTheme.warningOrange,
           ))
               .toList(),
         ),
@@ -356,11 +328,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
               children: [
                 Text(
                   alert['message'] ?? 'Alert',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+                  style: AppTheme.bodyLarge,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -375,11 +343,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       controller.formatTimestamp(alert['timestamp'] ?? 0),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.6),
-                        fontWeight: FontWeight.w400,
-                      ),
+                      style: AppTheme.caption,
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -391,10 +355,9 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
                       ),
                       child: Text(
                         alert['status'] == 'ACTIVE' ? 'ACTIVE' : 'RESOLVED',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                        style: AppTheme.labelText.copyWith(
                           color: iconColor,
+                          fontSize: 10,
                         ),
                       ),
                     ),
@@ -434,11 +397,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             message,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.6),
-              fontWeight: FontWeight.w500,
-            ),
+            style: AppTheme.bodySmall,
           ),
         ],
       ),

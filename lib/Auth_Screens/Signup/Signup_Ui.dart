@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../Widgets/Custom_Button.dart';
 import '../../Widgets/Custom_TextField.dart';
+import '../../Theme/app_theme.dart';
 import 'Signup_Controller.dart';
 
 class SignupScreen extends StatelessWidget {
@@ -26,7 +28,7 @@ class SignupScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: controller.getBackgroundGradientColors(),
+            colors: AppTheme.backgroundGradient,
             stops: const [0.0, 0.3, 0.7, 1.0],
           ),
         ),
@@ -78,18 +80,18 @@ class SignupScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       gradient: LinearGradient(
-                        colors: controller.getCardGradientColors(),
+                        colors: AppTheme.cardGradient,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: controller.getActiveIndicatorColor().withOpacity(0.2),
+                          color: AppTheme.secondaryAccent.withOpacity(0.2),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),
                       ],
                     ),
                     child: Lottie.asset(
-                      'assets/animations/signup.json', // You can use a different animation or the same login.json
+                      'assets/animations/signup.json',
                       fit: BoxFit.contain,
                       repeat: true,
                       animate: true,
@@ -98,7 +100,7 @@ class SignupScreen extends StatelessWidget {
                   const SizedBox(height: 30),
                   Text(
                     'Create Account',
-                    style: controller.getTitleTextStyle(),
+                    style: AppTheme.headingXL,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -107,16 +109,16 @@ class SignupScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(15),
                       gradient: LinearGradient(
-                        colors: controller.getCardGradientColors(),
+                        colors: AppTheme.cardGradient,
                       ),
                       border: Border.all(
-                        color: controller.getActiveIndicatorColor().withOpacity(0.2),
+                        color: AppTheme.secondaryAccent.withOpacity(0.2),
                         width: 1,
                       ),
                     ),
                     child: Text(
                       'Join us and start your amazing journey',
-                      style: controller.getSubtitleTextStyle(),
+                      style: AppTheme.subtitle,
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -147,15 +149,15 @@ class SignupScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 gradient: LinearGradient(
-                  colors: controller.getCardGradientColors(),
+                  colors: AppTheme.cardGradient,
                 ),
                 border: Border.all(
-                  color: controller.getActiveIndicatorColor().withOpacity(0.2),
+                  color: AppTheme.secondaryAccent.withOpacity(0.2),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: controller.getActiveIndicatorColor().withOpacity(0.2),
+                    color: AppTheme.secondaryAccent.withOpacity(0.2),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -177,7 +179,7 @@ class SignupScreen extends StatelessWidget {
                             validator: controller.validateFirstName,
                             prefixIcon: Icon(
                               Icons.person_rounded,
-                              color: controller.getActiveIndicatorColor(),
+                              color: AppTheme.secondaryAccent,
                               size: 22,
                             ),
                           ),
@@ -192,7 +194,7 @@ class SignupScreen extends StatelessWidget {
                             validator: controller.validateLastName,
                             prefixIcon: Icon(
                               Icons.person_outline_rounded,
-                              color: controller.getActiveIndicatorColor(),
+                              color: AppTheme.secondaryAccent,
                               size: 22,
                             ),
                           ),
@@ -208,7 +210,7 @@ class SignupScreen extends StatelessWidget {
                       validator: controller.validatePhone,
                       prefixIcon: Icon(
                         Icons.phone_rounded,
-                        color: controller.getActiveIndicatorColor(),
+                        color: AppTheme.secondaryAccent,
                         size: 22,
                       ),
                     ),
@@ -221,7 +223,7 @@ class SignupScreen extends StatelessWidget {
                       validator: controller.validateEmail,
                       prefixIcon: Icon(
                         Icons.email_rounded,
-                        color: controller.getActiveIndicatorColor(),
+                        color: AppTheme.secondaryAccent,
                         size: 22,
                       ),
                     ),
@@ -234,7 +236,7 @@ class SignupScreen extends StatelessWidget {
                       validator: controller.validatePassword,
                       prefixIcon: Icon(
                         Icons.lock_rounded,
-                        color: controller.getActiveIndicatorColor(),
+                        color: AppTheme.secondaryAccent,
                         size: 22,
                       ),
                     ),
@@ -247,7 +249,7 @@ class SignupScreen extends StatelessWidget {
                       validator: controller.validateConfirmPassword,
                       prefixIcon: Icon(
                         Icons.lock_outline_rounded,
-                        color: controller.getActiveIndicatorColor(),
+                        color: AppTheme.secondaryAccent,
                         size: 22,
                       ),
                     ),
@@ -268,9 +270,9 @@ class SignupScreen extends StatelessWidget {
       onPressed: controller.isLoading.value ? null : controller.signUp,
       text: controller.isLoading.value ? 'Creating Account...' : 'Create Account',
       icon: controller.isLoading.value ? null : Icons.person_add_rounded,
-      gradientColors: controller.getButtonGradientColors(),
-      shadowColor: controller.getPrimaryButtonColor(),
-      textStyle: controller.getButtonTextStyle(),
+      gradientColors: AppTheme.buttonGradient,
+      shadowColor: AppTheme.primaryAccent,
+      textStyle: AppTheme.buttonText,
       width: double.infinity,
       height: 56,
       borderRadius: 28,
@@ -299,10 +301,10 @@ class SignupScreen extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(15),
               gradient: LinearGradient(
-                colors: controller.getCardGradientColors(),
+                colors: AppTheme.cardGradient,
               ),
               border: Border.all(
-                color: controller.getActiveIndicatorColor().withOpacity(0.2),
+                color: AppTheme.secondaryAccent.withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -311,20 +313,16 @@ class SignupScreen extends StatelessWidget {
               children: [
                 Text(
                   "Already have an account? ",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
+                  style: AppTheme.bodySmall,
                 ),
                 GestureDetector(
                   onTap: controller.navigateToLogin,
                   child: Text(
                     'Sign In',
-                    style: controller.getLinkTextStyle().copyWith(
+                    style: AppTheme.linkText.copyWith(
                       fontWeight: FontWeight.w600,
                       decoration: TextDecoration.underline,
-                      decorationColor: controller.getActiveIndicatorColor(),
+                      decorationColor: AppTheme.accentCyan,
                     ),
                   ),
                 ),

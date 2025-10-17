@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../Services/Notification_service.dart';
+import '../SafetyMonitoring_ui.dart';
+import '../../Auth_Screens/Login/Login_Ui.dart';
 
 class SettingsController extends GetxController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -193,17 +195,42 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Logout
+  // Logout - FIXED VERSION
   Future<void> logout() async {
     try {
+      print('Starting logout process...');
       isLoading.value = true;
 
-      // Cancel all notifications before logout
-      await NotificationService.cancelAllNotifications();
+      final user = _auth.currentUser;
 
+      if (user != null) {
+        print('Updating user offline status...');
+        // Update offline status in database
+        await _database.ref().child('user_profiles').child(user.uid).update({
+          'isOnline': false,
+          'lastSeen': ServerValue.timestamp,
+        });
+        print('User offline status updated');
+      }
+
+      print('Signing out from Firebase Auth...');
       // Sign out from Firebase
       await _auth.signOut();
+      print('Firebase Auth sign out successful');
 
+      // Cancel all notifications
+      print('Cancelling all notifications...');
+      await NotificationService.cancelAllNotifications();
+
+      print('Navigating to Login screen...');
+      // Navigate to login screen - using widget instead of named route
+      Get.offAll(
+            () => const LoginScreen(),
+        transition: Transition.fadeIn,
+        duration: const Duration(milliseconds: 500),
+      );
+
+      // Show success message after navigation
       Get.snackbar(
         'Success',
         'Logged out successfully',
@@ -213,9 +240,19 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
 
-      // Navigate to login screen - adjust route name as per your app
-      Get.offAllNamed('/login'); // Change this to your login route
+      print('Logout completed successfully');
+
+    } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Error during logout: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to logout: ${e.message}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFFF6B6B).withOpacity(0.9),
+        colorText: Colors.white,
+      );
     } catch (e) {
+      print('Unexpected error during logout: $e');
       Get.snackbar(
         'Error',
         'Failed to logout: $e',

@@ -1,5 +1,3 @@
-// Store user data in Firebase Realtime Database
-
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,8 +5,6 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fyp_project/Auth_Screens/Login/Login_Ui.dart';
 import 'package:get/get.dart';
-import 'package:top_snackbar_flutter/top_snack_bar.dart';
-import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 
 class SignupController extends GetxController with GetTickerProviderStateMixin {
   // Controllers
@@ -148,72 +144,6 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
       // We'll check for existing email during actual signup process instead
       // since fetchSignInMethodsForEmail is deprecated in newer Firebase versions
     });
-  }
-
-  // Color scheme matching the beautiful blue gradient UI
-  List<Color> getBackgroundGradientColors() {
-    return [
-      const Color(0xFF0F2A4A), // Deep navy blue
-      const Color(0xFF1E4A6B), // Medium blue
-      const Color(0xFF2D6A9A), // Sky blue
-      const Color(0xFF4A90C2), // Light sky blue
-    ];
-  }
-
-  List<Color> getButtonGradientColors() {
-    return [const Color(0xFF4A90C2), const Color(0xFF87CEEB)];
-  }
-
-  List<Color> getCardGradientColors() {
-    return [
-      const Color(0xFF87CEEB).withOpacity(0.1),
-      const Color(0xFF4169E1).withOpacity(0.05),
-    ];
-  }
-
-  Color getPrimaryButtonColor() => const Color(0xFF4A90C2);
-
-  Color getSecondaryButtonColor() => const Color(0xFF87CEEB);
-
-   Color getActiveIndicatorColor() => const Color(0xFF06B6D4);
-
-  TextStyle getTitleTextStyle() {
-    return const TextStyle(
-      fontSize: 32,
-      fontWeight: FontWeight.w900,
-      color: Colors.white,
-      letterSpacing: 2.0,
-      shadows: [
-        Shadow(offset: Offset(2, 2), blurRadius: 8, color: Color(0xFF4A90C2)),
-      ],
-    );
-  }
-
-  TextStyle getSubtitleTextStyle() {
-    return TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w400,
-      color: Colors.white.withOpacity(0.8),
-      letterSpacing: 1.0,
-    );
-  }
-
-  TextStyle getButtonTextStyle() {
-    return const TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w600,
-      color: Colors.white,
-      letterSpacing: 1.0,
-    );
-  }
-
-  TextStyle getLinkTextStyle() {
-    return const TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w500,
-      color: Color(0xFF06B6D4),
-      letterSpacing: 0.5,
-    );
   }
 
   // Enhanced validation methods
@@ -363,7 +293,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
     Get.snackbar(
       title,
       message,
-      backgroundColor: getActiveIndicatorColor(),
+      backgroundColor: const Color(0xFF06B6D4),
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 3),
@@ -481,7 +411,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
         await _storeUserDataInRealtimeDB(user, firstName, lastName, phone);
         print('User data stored successfully');
 
-        // Show success message - removed email verification message
+        // Show success message
         print('Showing success message...');
         _showSuccessSnackbar(
           'Account Created Successfully!',
@@ -576,10 +506,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
     try {
       print('Creating database reference for user: ${user.uid}');
 
-      final DatabaseReference userRef = _database
-          .ref()
-          .child('users')
-          .child(user.uid);
+      final DatabaseReference userRef = _database.ref().child('users').child(user.uid);
 
       final Map<String, dynamic> userData = {
         'uid': user.uid,
@@ -590,7 +517,7 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
         'phone': phone,
         'createdAt': ServerValue.timestamp,
         'lastLogin': ServerValue.timestamp,
-        'isEmailVerified': true, // Set to true since we're not using email verification
+        'isEmailVerified': true,
         'profilePicture': '',
         'isActive': true,
         'accountType': 'user',
@@ -617,7 +544,6 @@ class SignupController extends GetxController with GetTickerProviderStateMixin {
         'Profile Data Warning',
         'Your account was created successfully, but some profile information might not have been saved. You can update it later in settings.',
       );
-      // Don't throw error here as auth was successful
     }
   }
 

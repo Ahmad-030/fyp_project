@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'Controller/Setting_Controller.dart';
+import '../Theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -17,12 +19,7 @@ class SettingsScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0F2A4A),
-              const Color(0xFF1E4A6B),
-              const Color(0xFF2D6A9A),
-              const Color(0xFF4A90C2),
-            ],
+            colors: AppTheme.backgroundGradient,
             stops: const [0.0, 0.3, 0.7, 1.0],
           ),
         ),
@@ -64,43 +61,30 @@ class SettingsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF87CEEB).withOpacity(0.2),
-                    const Color(0xFF4169E1).withOpacity(0.1),
-                  ],
+                  colors: AppTheme.cardGradient,
                 ),
                 border: Border.all(
-                  color: const Color(0xFF87CEEB).withOpacity(0.3),
+                  color: AppTheme.secondaryAccent.withOpacity(0.3),
                   width: 1,
                 ),
               ),
               child: const Icon(
                 Icons.settings,
-                color: Color(0xFF87CEEB),
+                color: AppTheme.secondaryAccent,
                 size: 24,
               ),
             ),
             const SizedBox(width: 16),
-            const Text(
+            Text(
               'Settings',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: 1.5,
-              ),
+              style: AppTheme.headingXL,
             ),
           ],
         ),
         const SizedBox(height: 8),
         Text(
           'Manage your account and preferences',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withOpacity(0.7),
-            fontWeight: FontWeight.w400,
-            letterSpacing: 0.5,
-          ),
+          style: AppTheme.subtitle,
         ),
       ],
     );
@@ -115,13 +99,10 @@ class SettingsScreen extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.1),
-              Colors.white.withOpacity(0.05),
-            ],
+            colors: AppTheme.cardGradient,
           ),
           border: Border.all(
-            color: Colors.white.withOpacity(0.2),
+            color: AppTheme.secondaryAccent.withOpacity(0.2),
             width: 1,
           ),
         ),
@@ -134,22 +115,18 @@ class SettingsScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF87CEEB).withOpacity(0.2),
+                    color: AppTheme.secondaryAccent.withOpacity(0.2),
                   ),
                   child: const Icon(
                     Icons.person,
-                    color: Color(0xFF87CEEB),
+                    color: AppTheme.secondaryAccent,
                     size: 20,
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Account Information',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+                  style: AppTheme.headingSmall,
                 ),
               ],
             ),
@@ -200,20 +177,12 @@ class SettingsScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
-                  fontWeight: FontWeight.w500,
-                ),
+                style: AppTheme.caption,
               ),
               const SizedBox(height: 4),
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTheme.bodyLarge,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -230,13 +199,10 @@ class SettingsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
+          colors: AppTheme.cardGradient,
         ),
         border: Border.all(
-          color: Colors.white.withOpacity(0.2),
+          color: AppTheme.secondaryAccent.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -249,22 +215,18 @@ class SettingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFFFFA500).withOpacity(0.2),
+                  color: AppTheme.warningOrange.withOpacity(0.2),
                 ),
                 child: const Icon(
                   Icons.notifications_active,
-                  color: Color(0xFFFFA500),
+                  color: AppTheme.warningOrange,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'Test Notifications',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+                style: AppTheme.headingSmall,
               ),
             ],
           ),
@@ -272,14 +234,14 @@ class SettingsScreen extends StatelessWidget {
           _buildTestButton(
             label: 'Test Proximity Alert',
             icon: Icons.location_on_rounded,
-            color: const Color(0xFFFF6B6B),
+            color: AppTheme.warningRed,
             onPressed: () => controller.testProximityNotification(),
           ),
           const SizedBox(height: 12),
           _buildTestButton(
             label: 'Test Sound Hazard Alert',
             icon: Icons.volume_up_rounded,
-            color: const Color(0xFFFFA500),
+            color: AppTheme.warningOrange,
             onPressed: () => controller.testSoundNotification(),
           ),
         ],
@@ -318,10 +280,8 @@ class SettingsScreen extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: AppTheme.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
                 ),
               ),
             ),
@@ -342,13 +302,10 @@ class SettingsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
+          colors: AppTheme.cardGradient,
         ),
         border: Border.all(
-          color: Colors.white.withOpacity(0.2),
+          color: AppTheme.secondaryAccent.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -361,22 +318,18 @@ class SettingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFFFF6B6B).withOpacity(0.2),
+                  color: AppTheme.warningRed.withOpacity(0.2),
                 ),
                 child: const Icon(
                   Icons.delete_outline,
-                  color: Color(0xFFFF6B6B),
+                  color: AppTheme.warningRed,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'Data Management',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+                style: AppTheme.headingSmall,
               ),
             ],
           ),
@@ -384,7 +337,7 @@ class SettingsScreen extends StatelessWidget {
           _buildActionButton(
             label: 'Clear All Alerts',
             icon: Icons.cleaning_services_outlined,
-            color: const Color(0xFFFF6B6B),
+            color: AppTheme.warningRed,
             onPressed: () => _showDeleteConfirmation(
               context: Get.context!,
               title: 'Clear All Alerts?',
@@ -397,7 +350,7 @@ class SettingsScreen extends StatelessWidget {
           _buildActionButton(
             label: 'Clear Proximity Alerts',
             icon: Icons.location_off_outlined,
-            color: const Color(0xFFFF6B6B),
+            color: AppTheme.warningRed,
             onPressed: () => _showDeleteConfirmation(
               context: Get.context!,
               title: 'Clear Proximity Alerts?',
@@ -409,7 +362,7 @@ class SettingsScreen extends StatelessWidget {
           _buildActionButton(
             label: 'Clear Sound Alerts',
             icon: Icons.volume_off_outlined,
-            color: const Color(0xFFFFA500),
+            color: AppTheme.warningOrange,
             onPressed: () => _showDeleteConfirmation(
               context: Get.context!,
               title: 'Clear Sound Alerts?',
@@ -453,10 +406,8 @@ class SettingsScreen extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: AppTheme.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
                 ),
               ),
             ),
@@ -477,12 +428,12 @@ class SettingsScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              const Color(0xFFFF6B6B).withOpacity(0.2),
-              const Color(0xFFFF8E72).withOpacity(0.1),
+              AppTheme.warningRed.withOpacity(0.2),
+              AppTheme.warningRed.withOpacity(0.1),
             ],
           ),
           border: Border.all(
-            color: const Color(0xFFFF6B6B).withOpacity(0.4),
+            color: AppTheme.warningRed.withOpacity(0.4),
             width: 1.5,
           ),
         ),
@@ -491,15 +442,13 @@ class SettingsScreen extends StatelessWidget {
           children: [
             const Icon(
               Icons.logout,
-              color: Color(0xFFFF6B6B),
+              color: AppTheme.warningRed,
               size: 22,
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'Logout',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+              style: AppTheme.buttonSmall.copyWith(
                 color: Colors.white,
               ),
             ),
@@ -518,29 +467,24 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E4A6B),
+        backgroundColor: AppTheme.primaryMedium,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTheme.headingSmall,
         ),
         content: Text(
           message,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
-          ),
+          style: AppTheme.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'Cancel',
-              style: TextStyle(
+              style: AppTheme.linkText.copyWith(
                 color: Colors.white.withOpacity(0.7),
               ),
             ),
@@ -550,10 +494,10 @@ class SettingsScreen extends StatelessWidget {
               Navigator.of(context).pop();
               onConfirm();
             },
-            child: const Text(
+            child: Text(
               'Delete',
-              style: TextStyle(
-                color: Color(0xFFFF6B6B),
+              style: AppTheme.linkText.copyWith(
+                color: AppTheme.warningRed,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -567,29 +511,24 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: Get.context!,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E4A6B),
+        backgroundColor: AppTheme.primaryMedium,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text(
+        title: Text(
           'Logout',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTheme.headingSmall,
         ),
         content: Text(
           'Are you sure you want to logout?',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
-          ),
+          style: AppTheme.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'Cancel',
-              style: TextStyle(
+              style: AppTheme.linkText.copyWith(
                 color: Colors.white.withOpacity(0.7),
               ),
             ),
@@ -599,10 +538,10 @@ class SettingsScreen extends StatelessWidget {
               Navigator.of(context).pop();
               controller.logout();
             },
-            child: const Text(
+            child: Text(
               'Logout',
-              style: TextStyle(
-                color: Color(0xFFFF6B6B),
+              style: AppTheme.linkText.copyWith(
+                color: AppTheme.warningRed,
                 fontWeight: FontWeight.w600,
               ),
             ),

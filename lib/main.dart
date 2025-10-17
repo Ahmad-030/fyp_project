@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart'; // Firebase Core import
 import 'Services/Notification_service.dart';
 import 'Splash_Screen/SplashScreen_ui.dart';
+import 'Theme/App_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,10 +18,9 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'FYP PROJECT',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.dark,
       home: SplashScreen(), // Your splash screen widget
     );
   }

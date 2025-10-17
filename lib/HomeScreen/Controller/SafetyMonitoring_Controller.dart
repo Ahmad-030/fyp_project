@@ -11,20 +11,24 @@ class SafetyMonitoringController extends GetxController {
   var isLoading = true.obs;
 
   late Set<String> _notifiedAlertIds;
+  late Map<String, int> _lastSeenTimestamps;
+  bool _isFirstLoad = true;
 
   @override
   void onInit() {
     super.onInit();
     _notifiedAlertIds = {};
+    _lastSeenTimestamps = {};
     _initializeNotifications();
-    _listenToAlarms();
   }
 
   Future<void> _initializeNotifications() async {
     try {
       await NotificationService.initializeNotifications();
+      _listenToAlarms();
     } catch (e) {
       print('Error initializing notifications: $e');
+      _listenToAlarms();
     }
   }
 
@@ -47,23 +51,32 @@ class SafetyMonitoringController extends GetxController {
               if (value is Map) {
                 final alertMap = Map<String, dynamic>.from(value);
                 final alertId = 'PROXIMITY_$key';
+                final timestamp = alertMap['timestamp'] ?? 0;
 
                 proximityAlerts.add({
                   'id': key,
                   'message':
                   alertMap['message'] ?? 'Proximity Alert Detected',
                   'status': alertMap['status'] ?? 'ACTIVE',
-                  'timestamp': alertMap['timestamp'] ?? 0,
+                  'timestamp': timestamp,
                 });
 
-                // Show notification if not already notified
-                if (!_notifiedAlertIds.contains(alertId) &&
-                    alertMap['status'] == 'ACTIVE') {
-                  _notifiedAlertIds.add(alertId);
-                  NotificationService.showProximityAlert(
-                    message: alertMap['message'] ?? 'Child entered danger zone',
-                    alertId: alertId,
-                  );
+                // Only notify on FIRST LOAD: skip old alerts from database
+                // After first load: only notify if status just changed to ACTIVE
+                if (alertMap['status'] == 'ACTIVE') {
+                  if (_isFirstLoad) {
+                    print('First load - skipping existing alert: $alertId');
+                    // Just record the timestamp, don't notify
+                    _lastSeenTimestamps[alertId] = timestamp;
+                  } else if (!_notifiedAlertIds.contains(alertId)) {
+                    // New alert that just became ACTIVE
+                    print('Showing NEW active alert: $alertId');
+                    _notifiedAlertIds.add(alertId);
+                    NotificationService.showProximityAlert(
+                      message: alertMap['message'] ?? 'Child entered danger zone',
+                      alertId: alertId,
+                    );
+                  }
                 }
               }
             });
@@ -77,26 +90,41 @@ class SafetyMonitoringController extends GetxController {
               if (value is Map) {
                 final alertMap = Map<String, dynamic>.from(value);
                 final alertId = 'SOUND_$key';
+                final timestamp = alertMap['timestamp'] ?? 0;
 
                 soundAlerts.add({
                   'id': key,
                   'message': alertMap['message'] ?? 'Dangerous sound detected',
                   'status': alertMap['status'] ?? 'ACTIVE',
-                  'timestamp': alertMap['timestamp'] ?? 0,
+                  'timestamp': timestamp,
                 });
 
-                // Show notification if not already notified
-                if (!_notifiedAlertIds.contains(alertId) &&
-                    alertMap['status'] == 'ACTIVE') {
-                  _notifiedAlertIds.add(alertId);
-                  NotificationService.showSoundHazardAlert(
-                    message: alertMap['message'] ??
-                        'Dangerous sound level detected',
-                    alertId: alertId,
-                  );
+                // Only notify on FIRST LOAD: skip old alerts from database
+                // After first load: only notify if status just changed to ACTIVE
+                if (alertMap['status'] == 'ACTIVE') {
+                  if (_isFirstLoad) {
+                    print('First load - skipping existing alert: $alertId');
+                    // Just record the timestamp, don't notify
+                    _lastSeenTimestamps[alertId] = timestamp;
+                  } else if (!_notifiedAlertIds.contains(alertId)) {
+                    // New alert that just became ACTIVE
+                    print('Showing NEW active alert: $alertId');
+                    _notifiedAlertIds.add(alertId);
+                    NotificationService.showSoundHazardAlert(
+                      message: alertMap['message'] ??
+                          'Dangerous sound level detected',
+                      alertId: alertId,
+                    );
+                  }
                 }
               }
             });
+          }
+
+          // Mark first load as complete after processing
+          if (_isFirstLoad) {
+            _isFirstLoad = false;
+            print('First load completed. Future alerts will be notified immediately.');
           }
         }
         isLoading.value = false;
@@ -112,18 +140,11 @@ class SafetyMonitoringController extends GetxController {
 
     DateTime date;
 
-    // Check if timestamp is in milliseconds or seconds
-    // Timestamps after year 2000 in seconds are > 946684800
-    // Timestamps in milliseconds are much larger (> 946684800000)
     if (timestamp > 946684800000) {
-      // Already in milliseconds
       date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     } else if (timestamp > 946684800) {
-      // In seconds, convert to milliseconds
       date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
     } else {
-      // Very small number - treat as seconds from now (relative time)
-      // This might be seconds elapsed, not absolute timestamp
       final now = DateTime.now();
       date = now.subtract(Duration(seconds: timestamp));
     }
@@ -131,39 +152,32 @@ class SafetyMonitoringController extends GetxController {
     final now = DateTime.now();
     final diff = now.difference(date);
 
-    // Less than 1 minute
     if (diff.inSeconds < 60) {
       return '${diff.inSeconds}s ago';
     }
 
-    // Less than 1 hour
     if (diff.inMinutes < 60) {
       return '${diff.inMinutes}m ago';
     }
 
-    // Less than 1 day (24 hours)
     if (diff.inHours < 24) {
       return '${diff.inHours}h ago';
     }
 
-    // Less than 7 days
     if (diff.inDays < 7) {
       return '${diff.inDays}d ago';
     }
 
-    // Less than 30 days
     if (diff.inDays < 30) {
       final weeks = (diff.inDays / 7).floor();
       return '${weeks}w ago';
     }
 
-    // Less than 365 days
     if (diff.inDays < 365) {
       final months = (diff.inDays / 30).floor();
       return '${months}mo ago';
     }
 
-    // More than 365 days
     final years = (diff.inDays / 365).floor();
     return '${years}y ago';
   }
