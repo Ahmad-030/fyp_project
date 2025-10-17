@@ -9,6 +9,7 @@ import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../HomeScreen/SafetyMonitoring_ui.dart';
+import '../../Services/Auth_Service.dart';
 import 'Login_Ui.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
@@ -365,14 +366,12 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   Future<void> login() async {
     print('\n========= LOGIN PROCESS STARTED =========');
 
-    // Prevent multiple simultaneous login attempts
     if (isLoading.value) {
       print('Already processing login, ignoring request');
       _showWarningSnackbar('Please Wait', 'Sign in is already in progress...');
       return;
     }
 
-    // Validate form first
     print('Validating form...');
     if (!formKey.currentState!.validate()) {
       print('Form validation failed');
@@ -380,11 +379,9 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       return;
     }
 
-    // Get trimmed values
     final email = emailController.text.trim().toLowerCase();
     final password = passwordController.text.trim();
 
-    // Check if fields are empty after trimming
     if (email.isEmpty || password.isEmpty) {
       _showErrorSnackbar('Empty Fields', 'Please enter both email and password');
       return;
@@ -400,7 +397,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     try {
       print('Attempting Firebase Auth sign in...');
 
-      // Sign in with Firebase Auth
       final UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -412,43 +408,39 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
         final User user = result.user!;
         print('User UID: ${user.uid}');
 
-        // Reload user to get latest data
         await user.reload();
         print('User reloaded successfully');
 
         print('Updating user data...');
-
-        // Update user data in Firebase Realtime Database
         await _updateUserLoginData(user);
 
-        // Handle remember me functionality
+        // *** NEW: Save user session for auto-login ***
+        final authService = AuthService();
+        await authService.saveUserSession(user.uid, email);
+        print('User session saved for auto-login');
+
         await _handleRememberMe(email);
 
-        // Get user profile data
         final userProfile = await _getUserProfile(user.uid);
         final userName = userProfile['fullName'] ?? userProfile['firstName'] ?? 'User';
 
         print('Login successful, showing success message...');
 
-        // Show success message
         _showSuccessSnackbar(
             'Welcome Back!',
             'Hello $userName! You have been signed in successfully.'
         );
 
-        // Clear form if not remembering
         if (!rememberMe.value) {
           _clearForm();
         } else {
-          passwordController.clear(); // Always clear password
+          passwordController.clear();
         }
 
-        // Navigate to home screen with improved error handling
         print('Navigating to Safety Monitoring screen...');
-        await Future.delayed(const Duration(seconds: 1)); // Reduced delay
+        await Future.delayed(const Duration(seconds: 1));
 
         try {
-          // Navigate to Safety Monitoring screen
           if (Get.isRegistered<LoginController>()) {
             print('Controller still registered, proceeding with navigation...');
             Get.offAll(() => const ChildSafetyMonitoringScreen());
@@ -459,7 +451,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
           }
         } catch (navError) {
           print('Navigation error: $navError');
-          // Force navigation as backup
           Get.offAll(() => const ChildSafetyMonitoringScreen());
         }
 
@@ -475,7 +466,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     } on FirebaseAuthException catch (e) {
       print('Firebase Auth Exception: ${e.code} - ${e.message}');
 
-      // Handle specific Firebase Auth errors
       String errorMessage;
       String errorTitle;
 
@@ -528,6 +518,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       print('========= LOGIN PROCESS COMPLETED =========\n');
     }
   }
+
 
   // Update user login data in Firebase Realtime Database
   Future<void> _updateUserLoginData(User user) async {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../Services/Auth_Service.dart';
 import '../Onboarding_screens/Onboarding_Ui.dart';
+import '../HomeScreen/SafetyMonitoring_ui.dart';
 
 class SplashController extends GetxController with GetTickerProviderStateMixin {
   // Animation Controllers
@@ -27,6 +29,9 @@ class SplashController extends GetxController with GetTickerProviderStateMixin {
   // Subtitle Animation
   late Animation<double> subtitleFadeAnimation;
   late Animation<Offset> subtitleSlideAnimation;
+
+  // Auth Service
+  final AuthService _authService = AuthService();
 
   @override
   void onInit() {
@@ -133,25 +138,47 @@ class SplashController extends GetxController with GetTickerProviderStateMixin {
   }
 
   void _startAnimations() {
+    // Start auto-login check immediately (parallel to animations)
+    _checkAutoLogin();
+
     // Start main animation
     animationController.forward();
 
     // Start repeating animations
     backgroundController.repeat(reverse: true);
     textController.repeat();
-
-    // Navigate after animation completes
-    animationController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _navigateToOnboarding();
-      }
-    });
   }
 
-  void _navigateToOnboarding() {
-    Future.delayed(const Duration(milliseconds: 1500), () {
+  // Check if user is already logged in
+  Future<void> _checkAutoLogin() async {
+    try {
+      print('Starting auto-login check...');
+
+      // Check if user is logged in (runs parallel to animations)
+      final isLoggedIn = await _authService.isUserLoggedIn();
+
+      print('Auto-login check result: $isLoggedIn');
+
+      // Wait for animation to complete before navigating
+      await animationController.forward();
+
+      // Small delay for smooth transition
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (isLoggedIn) {
+        print('User is logged in, navigating to home screen...');
+        Get.off(() => const ChildSafetyMonitoringScreen());
+      } else {
+        print('User is not logged in, navigating to onboarding...');
+        Get.off(() => const OnboardingScreen());
+      }
+    } catch (e) {
+      print('Error in auto-login check: $e');
+      // Wait for animation even on error
+      await animationController.forward();
+      await Future.delayed(const Duration(milliseconds: 500));
       Get.off(() => const OnboardingScreen());
-    });
+    }
   }
 
   // Gradient Colors for Text Background

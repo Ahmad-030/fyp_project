@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import '../../Services/Auth_Service.dart';
 import '../../Services/Notification_service.dart';
 import '../SafetyMonitoring_ui.dart';
 import '../../Auth_Screens/Login/Login_Ui.dart';
@@ -14,7 +15,7 @@ class SettingsController extends GetxController {
 
   var currentUser = Rxn<User>();
   var isLoading = false.obs;
-  var firstName = ''.obs;
+  var fullName = ''.obs; // Changed from firstName to fullName
   var phoneNumber = ''.obs;
 
   @override
@@ -36,22 +37,41 @@ class SettingsController extends GetxController {
         if (snapshot.exists) {
           final userData = Map<String, dynamic>.from(snapshot.value as Map);
 
-          // Match your signup structure exactly
-          firstName.value = userData['firstName'] ?? userData['fullName'] ?? 'User';
+          // Try to get full name from different possible fields
+          String firstName = userData['firstName'] ?? '';
+          String lastName = userData['lastName'] ?? '';
+
+          // If both firstName and lastName exist, combine them
+          if (firstName.isNotEmpty && lastName.isNotEmpty) {
+            fullName.value = '$firstName $lastName';
+          }
+          // If only firstName exists
+          else if (firstName.isNotEmpty) {
+            fullName.value = firstName;
+          }
+          // If fullName field exists directly
+          else if (userData['fullName'] != null && userData['fullName'].toString().isNotEmpty) {
+            fullName.value = userData['fullName'];
+          }
+          // Fallback
+          else {
+            fullName.value = 'User';
+          }
+
           phoneNumber.value = userData['phone'] ?? 'Not provided';
 
           print('User data loaded successfully:');
-          print('First Name: ${firstName.value}');
+          print('Full Name: ${fullName.value}');
           print('Phone: ${phoneNumber.value}');
         } else {
           print('No user data found in database for UID: $userId');
-          firstName.value = 'User';
+          fullName.value = 'User';
           phoneNumber.value = 'Not provided';
         }
       }
     } catch (e) {
       print('Error loading user data: $e');
-      firstName.value = 'User';
+      fullName.value = 'User';
       phoneNumber.value = 'Not provided';
     }
   }
@@ -108,16 +128,21 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Clear all alerts from database
+  // Clear all alerts from database - FIXED
   Future<void> clearAllAlerts() async {
     try {
       isLoading.value = true;
+
+      print('Clearing all alerts from Firebase...');
       final ref = _database.ref().child('childSafety/alarms');
       await ref.remove();
+      print('All alerts cleared from Firebase');
 
       // Cancel all notifications
       await NotificationService.cancelAllNotifications();
+      print('All notifications cancelled');
 
+      // Show success message
       Get.snackbar(
         'Success',
         'All alerts have been cleared',
@@ -126,7 +151,16 @@ class SettingsController extends GetxController {
         colorText: Colors.white,
         duration: const Duration(seconds: 2),
       );
+
+      // Navigate back to home screen to refresh UI
+      Get.back(); // Close settings screen
+
+      // Force rebuild of home screen with cleared data
+      await Future.delayed(const Duration(milliseconds: 100));
+      Get.off(() => const ChildSafetyMonitoringScreen());
+
     } catch (e) {
+      print('Error clearing all alerts: $e');
       Get.snackbar(
         'Error',
         'Failed to clear alerts: $e',
@@ -139,13 +173,17 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Clear proximity alerts only
+  // Clear proximity alerts only - FIXED
   Future<void> clearProximityAlerts() async {
     try {
       isLoading.value = true;
+
+      print('Clearing proximity alerts from Firebase...');
       final ref = _database.ref().child('childSafety/alarms/PROXIMITY');
       await ref.remove();
+      print('Proximity alerts cleared from Firebase');
 
+      // Show success message
       Get.snackbar(
         'Success',
         'Proximity alerts have been cleared',
@@ -154,7 +192,16 @@ class SettingsController extends GetxController {
         colorText: Colors.white,
         duration: const Duration(seconds: 2),
       );
+
+      // Navigate back to home screen to refresh UI
+      Get.back(); // Close settings screen
+
+      // Force rebuild of home screen with cleared data
+      await Future.delayed(const Duration(milliseconds: 100));
+      Get.off(() => const ChildSafetyMonitoringScreen());
+
     } catch (e) {
+      print('Error clearing proximity alerts: $e');
       Get.snackbar(
         'Error',
         'Failed to clear proximity alerts: $e',
@@ -167,13 +214,17 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Clear sound alerts only
+  // Clear sound alerts only - FIXED
   Future<void> clearSoundAlerts() async {
     try {
       isLoading.value = true;
+
+      print('Clearing sound hazard alerts from Firebase...');
       final ref = _database.ref().child('childSafety/alarms/SOUND_HAZARD');
       await ref.remove();
+      print('Sound hazard alerts cleared from Firebase');
 
+      // Show success message
       Get.snackbar(
         'Success',
         'Sound hazard alerts have been cleared',
@@ -182,7 +233,16 @@ class SettingsController extends GetxController {
         colorText: Colors.white,
         duration: const Duration(seconds: 2),
       );
+
+      // Navigate back to home screen to refresh UI
+      Get.back(); // Close settings screen
+
+      // Force rebuild of home screen with cleared data
+      await Future.delayed(const Duration(milliseconds: 100));
+      Get.off(() => const ChildSafetyMonitoringScreen());
+
     } catch (e) {
+      print('Error clearing sound alerts: $e');
       Get.snackbar(
         'Error',
         'Failed to clear sound alerts: $e',
@@ -205,7 +265,6 @@ class SettingsController extends GetxController {
 
       if (user != null) {
         print('Updating user offline status...');
-        // Update offline status in database
         await _database.ref().child('user_profiles').child(user.uid).update({
           'isOnline': false,
           'lastSeen': ServerValue.timestamp,
@@ -214,23 +273,24 @@ class SettingsController extends GetxController {
       }
 
       print('Signing out from Firebase Auth...');
-      // Sign out from Firebase
       await _auth.signOut();
       print('Firebase Auth sign out successful');
 
-      // Cancel all notifications
+      // Clear user session
+      final authService = AuthService();
+      await authService.clearUserSession();
+      print('User session cleared');
+
       print('Cancelling all notifications...');
       await NotificationService.cancelAllNotifications();
 
       print('Navigating to Login screen...');
-      // Navigate to login screen - using widget instead of named route
       Get.offAll(
             () => const LoginScreen(),
         transition: Transition.fadeIn,
         duration: const Duration(milliseconds: 500),
       );
 
-      // Show success message after navigation
       Get.snackbar(
         'Success',
         'Logged out successfully',

@@ -134,9 +134,9 @@ class SettingsScreen extends StatelessWidget {
             _buildInfoRow(
               icon: Icons.person_outline,
               label: 'Name',
-              value: controller.firstName.value.isEmpty
+              value: controller.fullName.value.isEmpty
                   ? 'Loading...'
-                  : controller.firstName.value,
+                  : controller.fullName.value,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
