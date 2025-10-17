@@ -10,7 +10,7 @@ class NotificationService {
   // Initialize notifications with permission request
   static Future<bool> initializeNotifications() async {
     try {
-      print('Initializing notification service...');
+      print('📱 Initializing notification service...');
 
       // Android initialization
       const AndroidInitializationSettings initializationSettingsAndroid =
@@ -22,6 +22,7 @@ class NotificationService {
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
+        requestCriticalPermission: true,
       );
 
       const InitializationSettings initializationSettings =
@@ -33,26 +34,32 @@ class NotificationService {
       final bool? initialized = await flutterLocalNotificationsPlugin.initialize(
         initializationSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          print('Notification tapped: ${response.payload}');
+          print('✅ Notification tapped: ${response.payload}');
         },
+        onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       );
 
-      print('Notification initialization result: $initialized');
+      print('✅ Notification initialization result: $initialized');
 
-      // Request permissions for Android 13+ and iOS
+      // Request permissions
       await _requestPermissions();
 
       return initialized ?? false;
     } catch (e) {
-      print('Error initializing notifications: $e');
+      print('❌ Error initializing notifications: $e');
       return false;
     }
+  }
+
+  // ✅ Background notification handler
+  static void notificationTapBackground(NotificationResponse notificationResponse) {
+    print('🎯 Background notification tapped: ${notificationResponse.payload}');
   }
 
   // Request notification permissions
   static Future<bool> _requestPermissions() async {
     try {
-      print('Requesting notification permissions...');
+      print('🔔 Requesting notification permissions...');
 
       // For Android 13+ (API level 33+)
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
@@ -60,8 +67,9 @@ class NotificationService {
           AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidImplementation != null) {
-        final bool? granted = await androidImplementation.requestNotificationsPermission();
-        print('Android notification permission granted: $granted');
+        final bool? granted =
+        await androidImplementation.requestNotificationsPermission();
+        print('✅ Android notification permission: $granted');
       }
 
       // For iOS
@@ -72,13 +80,14 @@ class NotificationService {
         alert: true,
         badge: true,
         sound: true,
+        critical: true,
       );
 
-      print('iOS notification permission result: $result');
+      print('✅ iOS notification permission: $result');
 
       return result ?? true;
     } catch (e) {
-      print('Error requesting permissions: $e');
+      print('❌ Error requesting permissions: $e');
       return false;
     }
   }
@@ -86,32 +95,31 @@ class NotificationService {
   // Check if notifications are enabled
   static Future<bool> areNotificationsEnabled() async {
     try {
-      // For Android
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
       flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidImplementation != null) {
-        final bool? enabled = await androidImplementation.areNotificationsEnabled();
-        print('Notifications enabled (Android): $enabled');
+        final bool? enabled =
+        await androidImplementation.areNotificationsEnabled();
+        print('✅ Notifications enabled (Android): $enabled');
         return enabled ?? false;
       }
 
-      // For iOS - assume enabled if we got this far
       return true;
     } catch (e) {
-      print('Error checking notification status: $e');
+      print('❌ Error checking notification status: $e');
       return false;
     }
   }
 
-  // Show proximity alert notification
+  // Show proximity alert notification - WORKS IN BACKGROUND
   static Future<void> showProximityAlert({
     required String message,
     required String alertId,
   }) async {
     try {
-      print('Showing proximity alert: $message');
+      print('📍 Showing proximity alert: $message');
 
       const AndroidNotificationDetails androidDetails =
       AndroidNotificationDetails(
@@ -123,8 +131,12 @@ class NotificationService {
         playSound: true,
         enableVibration: true,
         enableLights: true,
+        fullScreenIntent: true, // ✅ Show on lock screen
         color: Color(0xFFFF6B6B),
         icon: '@mipmap/ic_launcher',
+        ongoing: false,
+        autoCancel: true,
+        showWhen: true,
       );
 
       const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -132,6 +144,7 @@ class NotificationService {
         presentBadge: true,
         presentSound: true,
         sound: 'default',
+        interruptionLevel: InterruptionLevel.timeSensitive, // ✅ Critical alert
       );
 
       const NotificationDetails notificationDetails = NotificationDetails(
@@ -147,20 +160,20 @@ class NotificationService {
         payload: alertId,
       );
 
-      print('Proximity alert shown successfully');
+      print('✅ Proximity alert shown successfully');
     } catch (e) {
-      print('Error showing proximity alert: $e');
+      print('❌ Error showing proximity alert: $e');
       rethrow;
     }
   }
 
-  // Show sound hazard notification
+  // Show sound hazard notification - WORKS IN BACKGROUND
   static Future<void> showSoundHazardAlert({
     required String message,
     required String alertId,
   }) async {
     try {
-      print('Showing sound hazard alert: $message');
+      print('🔊 Showing sound hazard alert: $message');
 
       const AndroidNotificationDetails androidDetails =
       AndroidNotificationDetails(
@@ -172,8 +185,12 @@ class NotificationService {
         playSound: true,
         enableVibration: true,
         enableLights: true,
+        fullScreenIntent: true, // ✅ Show on lock screen
         color: Color(0xFFFFA500),
         icon: '@mipmap/ic_launcher',
+        ongoing: false,
+        autoCancel: true,
+        showWhen: true,
       );
 
       const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -181,6 +198,7 @@ class NotificationService {
         presentBadge: true,
         presentSound: true,
         sound: 'default',
+        interruptionLevel: InterruptionLevel.timeSensitive, // ✅ Critical alert
       );
 
       const NotificationDetails notificationDetails = NotificationDetails(
@@ -196,9 +214,9 @@ class NotificationService {
         payload: alertId,
       );
 
-      print('Sound hazard alert shown successfully');
+      print('✅ Sound hazard alert shown successfully');
     } catch (e) {
-      print('Error showing sound hazard alert: $e');
+      print('❌ Error showing sound hazard alert: $e');
       rethrow;
     }
   }
@@ -207,9 +225,9 @@ class NotificationService {
   static Future<void> cancelNotification(String alertId) async {
     try {
       await flutterLocalNotificationsPlugin.cancel(alertId.hashCode);
-      print('Cancelled notification: $alertId');
+      print('✅ Cancelled notification: $alertId');
     } catch (e) {
-      print('Error cancelling notification: $e');
+      print('❌ Error cancelling notification: $e');
     }
   }
 
@@ -217,9 +235,9 @@ class NotificationService {
   static Future<void> cancelAllNotifications() async {
     try {
       await flutterLocalNotificationsPlugin.cancelAll();
-      print('All notifications cancelled');
+      print('✅ All notifications cancelled');
     } catch (e) {
-      print('Error cancelling all notifications: $e');
+      print('❌ Error cancelling all notifications: $e');
     }
   }
 
@@ -230,7 +248,7 @@ class NotificationService {
       await flutterLocalNotificationsPlugin.pendingNotificationRequests();
       return pendingNotifications.length;
     } catch (e) {
-      print('Error getting pending notifications: $e');
+      print('❌ Error getting pending notifications: $e');
       return 0;
     }
   }

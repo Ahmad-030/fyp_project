@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'Controller/Setting_Controller.dart';
+import 'Controller/SafetyMonitoring_Controller.dart';
 import '../Theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -12,6 +13,8 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final SettingsController controller = Get.put(SettingsController());
+    // Get the SafetyMonitoringController to access real-time data
+    final SafetyMonitoringController monitoringController = Get.find<SafetyMonitoringController>();
 
     return Scaffold(
       body: Container(
@@ -33,6 +36,11 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 32),
+
+                  // ✅ NEW: Real-time Last Update Section
+                  _buildRealtimeUpdateSection(monitoringController),
+                  const SizedBox(height: 24),
+
                   _buildUserSection(controller),
                   const SizedBox(height: 24),
                   _buildTestSection(controller),
@@ -88,6 +96,195 @@ class SettingsScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  // ✅ NEW: Real-time Update Section
+  Widget _buildRealtimeUpdateSection(SafetyMonitoringController controller) {
+    return Obx(() => Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.secondaryAccent.withOpacity(0.15),
+            AppTheme.secondaryAccent.withOpacity(0.05),
+          ],
+        ),
+        border: Border.all(
+          color: AppTheme.secondaryAccent.withOpacity(0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.secondaryAccent.withOpacity(0.2),
+            blurRadius: 15,
+            spreadRadius: 3,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.secondaryAccent.withOpacity(0.2),
+                ),
+                child: const Icon(
+                  Icons.update,
+                  color: AppTheme.secondaryAccent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Real-time Monitoring',
+                style: AppTheme.headingSmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Connection Status
+          Row(
+            children: [
+              const Icon(
+                Icons.circle,
+                size: 12,
+                color: Colors.green,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Status',
+                      style: AppTheme.caption,
+                    ),
+                    Text(
+                      controller.connectionStatus.value,
+                      style: AppTheme.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Last Update Time
+          Row(
+            children: [
+              const Icon(
+                Icons.access_time,
+                size: 12,
+                color: AppTheme.secondaryAccent,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Last Update',
+                      style: AppTheme.caption,
+                    ),
+                    Text(
+                      _formatLastUpdate(controller.lastRefreshTime.value),
+                      style: AppTheme.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Alert Counts
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.red.withOpacity(0.1),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${controller.proximityAlerts.length}',
+                        style: AppTheme.headingLarge.copyWith(
+                          color: Colors.red,
+                        ),
+                      ),
+                      Text(
+                        'Proximity',
+                        style: AppTheme.caption,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.orange.withOpacity(0.1),
+                    border: Border.all(
+                      color: Colors.orange.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${controller.soundAlerts.length}',
+                        style: AppTheme.headingLarge.copyWith(
+                          color: Colors.orange,
+                        ),
+                      ),
+                      Text(
+                        'Sound',
+                        style: AppTheme.caption,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ));
+  }
+
+  String _formatLastUpdate(DateTime lastUpdate) {
+    final now = DateTime.now();
+    final diff = now.difference(lastUpdate);
+
+    if (diff.inSeconds < 60) {
+      return '${diff.inSeconds}s ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inHours < 24) {
+      return '${diff.inHours}h ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
+    }
+    return 'Recently';
   }
 
   Widget _buildUserSection(SettingsController controller) {

@@ -15,14 +15,21 @@ class SettingsController extends GetxController {
 
   var currentUser = Rxn<User>();
   var isLoading = false.obs;
-  var fullName = ''.obs; // Changed from firstName to fullName
+  var fullName = ''.obs;
   var phoneNumber = ''.obs;
+
+  // Real-time monitoring status
+  var connectionStatus = RxString('🟢 Connected');
+  var lastRefreshTime = Rx<DateTime>(DateTime.now());
+  var proximityAlerts = RxList<Map<String, dynamic>>();
+  var soundAlerts = RxList<Map<String, dynamic>>();
 
   @override
   void onInit() {
     super.onInit();
     _loadCurrentUser();
     _loadUserData();
+    _setupRealtimeMonitoring();
   }
 
   void _loadCurrentUser() {
@@ -37,48 +44,102 @@ class SettingsController extends GetxController {
         if (snapshot.exists) {
           final userData = Map<String, dynamic>.from(snapshot.value as Map);
 
-          // Try to get full name from different possible fields
           String firstName = userData['firstName'] ?? '';
           String lastName = userData['lastName'] ?? '';
 
-          // If both firstName and lastName exist, combine them
           if (firstName.isNotEmpty && lastName.isNotEmpty) {
             fullName.value = '$firstName $lastName';
-          }
-          // If only firstName exists
-          else if (firstName.isNotEmpty) {
+          } else if (firstName.isNotEmpty) {
             fullName.value = firstName;
-          }
-          // If fullName field exists directly
-          else if (userData['fullName'] != null && userData['fullName'].toString().isNotEmpty) {
+          } else if (userData['fullName'] != null && userData['fullName'].toString().isNotEmpty) {
             fullName.value = userData['fullName'];
-          }
-          // Fallback
-          else {
+          } else {
             fullName.value = 'User';
           }
 
           phoneNumber.value = userData['phone'] ?? 'Not provided';
 
-          print('User data loaded successfully:');
-          print('Full Name: ${fullName.value}');
-          print('Phone: ${phoneNumber.value}');
+          print('✅ User data loaded successfully');
         } else {
-          print('No user data found in database for UID: $userId');
+          print('⚠️ No user data found in database');
           fullName.value = 'User';
           phoneNumber.value = 'Not provided';
         }
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      print('❌ Error loading user data: $e');
       fullName.value = 'User';
       phoneNumber.value = 'Not provided';
+    }
+  }
+
+  // ✅ NEW: Setup real-time monitoring
+  void _setupRealtimeMonitoring() {
+    try {
+      print('🔗 Setting up real-time monitoring...');
+      final ref = _database.ref().child('childSafety/alarms');
+
+      ref.onValue.listen((event) {
+        lastRefreshTime.value = DateTime.now();
+        connectionStatus.value = '🟢 Connected';
+
+        if (event.snapshot.exists) {
+          proximityAlerts.clear();
+          soundAlerts.clear();
+
+          final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+
+          // Parse PROXIMITY alerts
+          if (data.containsKey('PROXIMITY')) {
+            final proxData = Map<String, dynamic>.from(data['PROXIMITY'] as Map);
+            proxData.forEach((key, value) {
+              if (value is Map) {
+                final alertMap = Map<String, dynamic>.from(value);
+                proximityAlerts.add({
+                  'id': key,
+                  'message': alertMap['message'] ?? 'Proximity Alert',
+                  'status': alertMap['status'] ?? 'ACTIVE',
+                  'timestamp': alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0,
+                });
+              }
+            });
+          }
+
+          // Parse SOUND_HAZARD alerts
+          if (data.containsKey('SOUND_HAZARD')) {
+            final soundData = Map<String, dynamic>.from(data['SOUND_HAZARD'] as Map);
+            soundData.forEach((key, value) {
+              if (value is Map) {
+                final alertMap = Map<String, dynamic>.from(value);
+                soundAlerts.add({
+                  'id': key,
+                  'message': alertMap['message'] ?? 'Sound Alert',
+                  'status': alertMap['status'] ?? 'ACTIVE',
+                  'timestamp': alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0,
+                });
+              }
+            });
+          }
+
+          print('✅ Real-time data updated');
+        } else {
+          print('⚠️ No alerts data found');
+          connectionStatus.value = '⚠️ No data';
+        }
+      }, onError: (error) {
+        print('❌ Real-time listener error: $error');
+        connectionStatus.value = '🔴 Error';
+      });
+    } catch (e) {
+      print('❌ Error setting up monitoring: $e');
+      connectionStatus.value = '🔴 Failed';
     }
   }
 
   // Test proximity notification
   Future<void> testProximityNotification() async {
     try {
+      print('🧪 Testing proximity notification...');
       await NotificationService.showProximityAlert(
         message: 'This is a test proximity alert notification',
         alertId: 'test_proximity_${DateTime.now().millisecondsSinceEpoch}',
@@ -91,7 +152,9 @@ class SettingsController extends GetxController {
         colorText: Colors.white,
         duration: const Duration(seconds: 2),
       );
+      print('✅ Test proximity notification sent');
     } catch (e) {
+      print('❌ Error: $e');
       Get.snackbar(
         'Error',
         'Failed to send test notification: $e',
@@ -105,6 +168,7 @@ class SettingsController extends GetxController {
   // Test sound hazard notification
   Future<void> testSoundNotification() async {
     try {
+      print('🧪 Testing sound notification...');
       await NotificationService.showSoundHazardAlert(
         message: 'This is a test sound hazard alert notification',
         alertId: 'test_sound_${DateTime.now().millisecondsSinceEpoch}',
@@ -117,7 +181,9 @@ class SettingsController extends GetxController {
         colorText: Colors.white,
         duration: const Duration(seconds: 2),
       );
+      print('✅ Test sound notification sent');
     } catch (e) {
+      print('❌ Error: $e');
       Get.snackbar(
         'Error',
         'Failed to send test notification: $e',
@@ -128,21 +194,19 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Clear all alerts from database - FIXED
+  // Clear all alerts from database
   Future<void> clearAllAlerts() async {
     try {
       isLoading.value = true;
+      print('🗑️ Clearing all alerts...');
 
-      print('Clearing all alerts from Firebase...');
       final ref = _database.ref().child('childSafety/alarms');
       await ref.remove();
-      print('All alerts cleared from Firebase');
+      print('✅ All alerts cleared');
 
-      // Cancel all notifications
       await NotificationService.cancelAllNotifications();
-      print('All notifications cancelled');
+      print('✅ All notifications cancelled');
 
-      // Show success message
       Get.snackbar(
         'Success',
         'All alerts have been cleared',
@@ -152,15 +216,11 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
 
-      // Navigate back to home screen to refresh UI
-      Get.back(); // Close settings screen
-
-      // Force rebuild of home screen with cleared data
+      Get.back();
       await Future.delayed(const Duration(milliseconds: 100));
       Get.off(() => const ChildSafetyMonitoringScreen());
-
     } catch (e) {
-      print('Error clearing all alerts: $e');
+      print('❌ Error clearing all alerts: $e');
       Get.snackbar(
         'Error',
         'Failed to clear alerts: $e',
@@ -173,17 +233,16 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Clear proximity alerts only - FIXED
+  // Clear proximity alerts only
   Future<void> clearProximityAlerts() async {
     try {
       isLoading.value = true;
+      print('🗑️ Clearing proximity alerts...');
 
-      print('Clearing proximity alerts from Firebase...');
       final ref = _database.ref().child('childSafety/alarms/PROXIMITY');
       await ref.remove();
-      print('Proximity alerts cleared from Firebase');
+      print('✅ Proximity alerts cleared');
 
-      // Show success message
       Get.snackbar(
         'Success',
         'Proximity alerts have been cleared',
@@ -193,15 +252,11 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
 
-      // Navigate back to home screen to refresh UI
-      Get.back(); // Close settings screen
-
-      // Force rebuild of home screen with cleared data
+      Get.back();
       await Future.delayed(const Duration(milliseconds: 100));
       Get.off(() => const ChildSafetyMonitoringScreen());
-
     } catch (e) {
-      print('Error clearing proximity alerts: $e');
+      print('❌ Error clearing proximity alerts: $e');
       Get.snackbar(
         'Error',
         'Failed to clear proximity alerts: $e',
@@ -214,17 +269,16 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Clear sound alerts only - FIXED
+  // Clear sound alerts only
   Future<void> clearSoundAlerts() async {
     try {
       isLoading.value = true;
+      print('🗑️ Clearing sound alerts...');
 
-      print('Clearing sound hazard alerts from Firebase...');
       final ref = _database.ref().child('childSafety/alarms/SOUND_HAZARD');
       await ref.remove();
-      print('Sound hazard alerts cleared from Firebase');
+      print('✅ Sound hazard alerts cleared');
 
-      // Show success message
       Get.snackbar(
         'Success',
         'Sound hazard alerts have been cleared',
@@ -234,15 +288,11 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
 
-      // Navigate back to home screen to refresh UI
-      Get.back(); // Close settings screen
-
-      // Force rebuild of home screen with cleared data
+      Get.back();
       await Future.delayed(const Duration(milliseconds: 100));
       Get.off(() => const ChildSafetyMonitoringScreen());
-
     } catch (e) {
-      print('Error clearing sound alerts: $e');
+      print('❌ Error clearing sound alerts: $e');
       Get.snackbar(
         'Error',
         'Failed to clear sound alerts: $e',
@@ -255,36 +305,35 @@ class SettingsController extends GetxController {
     }
   }
 
-  // Logout - FIXED VERSION
+  // Logout
   Future<void> logout() async {
     try {
-      print('Starting logout process...');
+      print('🚪 Starting logout process...');
       isLoading.value = true;
 
       final user = _auth.currentUser;
 
       if (user != null) {
-        print('Updating user offline status...');
+        print('📝 Updating user offline status...');
         await _database.ref().child('user_profiles').child(user.uid).update({
           'isOnline': false,
           'lastSeen': ServerValue.timestamp,
         });
-        print('User offline status updated');
+        print('✅ User offline status updated');
       }
 
-      print('Signing out from Firebase Auth...');
+      print('🔐 Signing out from Firebase...');
       await _auth.signOut();
-      print('Firebase Auth sign out successful');
+      print('✅ Firebase sign out successful');
 
-      // Clear user session
       final authService = AuthService();
       await authService.clearUserSession();
-      print('User session cleared');
+      print('✅ User session cleared');
 
-      print('Cancelling all notifications...');
       await NotificationService.cancelAllNotifications();
+      print('✅ Notifications cancelled');
 
-      print('Navigating to Login screen...');
+      print('🔄 Navigating to login...');
       Get.offAll(
             () => const LoginScreen(),
         transition: Transition.fadeIn,
@@ -300,10 +349,9 @@ class SettingsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
 
-      print('Logout completed successfully');
-
+      print('✅ Logout completed successfully');
     } on FirebaseAuthException catch (e) {
-      print('Firebase Auth Error during logout: $e');
+      print('❌ Firebase Auth Error during logout: $e');
       Get.snackbar(
         'Error',
         'Failed to logout: ${e.message}',
@@ -312,7 +360,7 @@ class SettingsController extends GetxController {
         colorText: Colors.white,
       );
     } catch (e) {
-      print('Unexpected error during logout: $e');
+      print('❌ Unexpected error during logout: $e');
       Get.snackbar(
         'Error',
         'Failed to logout: $e',
@@ -327,7 +375,7 @@ class SettingsController extends GetxController {
 
   @override
   void onClose() {
-    print('SettingsController disposed');
+    print('🧹 SettingsController disposed');
     super.onClose();
   }
 }
