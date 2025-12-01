@@ -9,6 +9,7 @@ import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../HomeScreen/SafetyMonitoring_ui.dart';
+import '../../IntroScreen/IntroScreen.dart';
 import '../../Services/Auth_Service.dart';
 import 'Login_Ui.dart';
 
@@ -414,7 +415,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
         print('Updating user data...');
         await _updateUserLoginData(user);
 
-        // *** NEW: Save user session for auto-login ***
+        // *** Save user session for auto-login ***
         final authService = AuthService();
         await authService.saveUserSession(user.uid, email);
         print('User session saved for auto-login');
@@ -437,21 +438,22 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
           passwordController.clear();
         }
 
-        print('Navigating to Safety Monitoring screen...');
+        // *** UPDATED: Navigate to Intro Screen instead of Safety Monitoring ***
+        print('Navigating to Intro screen...');
         await Future.delayed(const Duration(seconds: 1));
 
         try {
           if (Get.isRegistered<LoginController>()) {
             print('Controller still registered, proceeding with navigation...');
-            Get.offAll(() => const ChildSafetyMonitoringScreen());
-            print('Navigation to SafetyMonitoringScreen completed successfully');
+            Get.offAll(() => const IntroScreen());
+            print('Navigation to IntroScreen completed successfully');
           } else {
             print('Controller no longer registered, forcing navigation...');
-            Get.offAll(() => const ChildSafetyMonitoringScreen());
+            Get.offAll(() => const IntroScreen());
           }
         } catch (navError) {
           print('Navigation error: $navError');
-          Get.offAll(() => const ChildSafetyMonitoringScreen());
+          Get.offAll(() => const IntroScreen());
         }
 
         print('User logged in successfully: ${user.uid}');
@@ -622,7 +624,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   // Get current user
   User? get currentUser => _auth.currentUser;
 
-  // Auto login check
+  // Auto login check - Updated to go to IntroScreen
   Future<void> checkAutoLogin() async {
     try {
       print('Checking auto login status...');
@@ -631,13 +633,13 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
         final user = currentUser!;
         print('User found: ${user.uid}');
 
-        print('User authenticated, updating login data and navigating to home...');
+        print('User authenticated, updating login data and navigating to intro...');
 
         // Update login data
         await _updateUserLoginData(user);
 
-        // Navigate to Safety Monitoring screen
-        Get.offAll(() => const ChildSafetyMonitoringScreen());
+        // Navigate to Intro Screen
+        Get.offAll(() => const IntroScreen());
       } else {
         print('No user signed in');
       }

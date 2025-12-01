@@ -11,12 +11,12 @@ class SafetyMonitoringController extends GetxController {
 
   var proximityAlerts = <Map<String, dynamic>>[].obs;
   var soundAlerts = <Map<String, dynamic>>[].obs;
+  var cryAlerts = <Map<String, dynamic>>[].obs;
   var isLoading = true.obs;
   var lastRefreshTime = DateTime.now().obs;
   var debugLogs = <String>[].obs;
   var connectionStatus = 'Connecting...'.obs;
 
-  // ✅ NEW: Firebase server timestamp for accurate sync
   var firebaseLastUpdate = Rx<DateTime?>(null);
   var serverTime = DateTime.now().obs;
 
@@ -45,12 +45,10 @@ class SafetyMonitoringController extends GetxController {
     }
   }
 
-  // ✅ NEW: Sync with Firebase server time
   Future<void> _syncServerTime() async {
     try {
       _addLog('⏰ Syncing with Firebase server time...');
 
-      // Get server timestamp reference
       final serverRef = _database.ref().child('.info/serverTimeOffset');
       final event = await serverRef.once();
 
@@ -85,10 +83,15 @@ class SafetyMonitoringController extends GetxController {
   void _listenToAlarms() {
     try {
       _addLog('🔗 Connecting to Firebase...');
+      _addLog('📍 Database URL: ${_database.app.options.databaseURL}');
+
       _alarmRef = _database.ref().child('childSafety/alarms');
 
+      _addLog('📍 Listening to path: childSafety/alarms');
+      _addLog('🔄 Setting up onValue listener...');
+
       _alarmRef!.onValue.listen(
-            (event) {
+            (DatabaseEvent event) {
           _addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
           _addLog('📡 FIREBASE UPDATE RECEIVED');
           _addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -96,88 +99,172 @@ class SafetyMonitoringController extends GetxController {
           connectionStatus.value = '🟢 Connected';
           lastRefreshTime.value = DateTime.now();
 
-          if (event.snapshot.exists) {
-            final data = Map<String, dynamic>.from(event.snapshot.value as Map);
-            _addLog('✅ Data exists in database');
-            _addLog('📊 Keys: ${data.keys.toList()}');
+          // Debug: Check if snapshot exists
+          _addLog('📊 Snapshot exists: ${event.snapshot.exists}');
+          _addLog('📊 Snapshot value type: ${event.snapshot.value?.runtimeType}');
 
-            proximityAlerts.clear();
-            soundAlerts.clear();
+          if (event.snapshot.value != null) {
+            _addLog('📊 Snapshot value: ${event.snapshot.value}');
+          }
 
-            // Track the latest Firebase timestamp
-            int latestTimestamp = 0;
+          if (event.snapshot.exists && event.snapshot.value != null) {
+            try {
+              final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+              _addLog('✅ Data exists in database');
+              _addLog('📊 Root Keys: ${data.keys.toList()}');
 
-            // Parse PROXIMITY alerts
-            if (data.containsKey('PROXIMITY')) {
-              _addLog('');
-              _addLog('🔍 PROXIMITY ALERTS:');
-              final proxData = Map<String, dynamic>.from(data['PROXIMITY'] as Map);
-              _addLog('   Count: ${proxData.length}');
+              proximityAlerts.clear();
+              soundAlerts.clear();
+              cryAlerts.clear();
 
-              proxData.forEach((key, value) {
-                if (value is Map) {
-                  final alertMap = Map<String, dynamic>.from(value);
-                  final timestamp = _normalizeTimestamp(alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0);
+              int latestTimestamp = 0;
+              int totalAlerts = 0;
 
-                  if (timestamp > latestTimestamp) {
-                    latestTimestamp = timestamp;
-                  }
+              // Parse PROXIMITY alerts
+              if (data.containsKey('PROXIMITY')) {
+                _addLog('');
+                _addLog('🔍 PROXIMITY ALERTS:');
+                try {
+                  final proxData = Map<String, dynamic>.from(data['PROXIMITY'] as Map);
+                  _addLog('   Alert IDs: ${proxData.keys.toList()}');
+                  _addLog('   Count: ${proxData.length}');
 
-                  _parseAndProcessAlert(
-                    key: key,
-                    alertMap: alertMap,
-                    alertType: 'PROXIMITY',
-                    isProximity: true,
-                  );
+                  proxData.forEach((key, value) {
+                    totalAlerts++;
+                    _addLog('   Processing alert: $key');
+                    if (value is Map) {
+                      final alertMap = Map<String, dynamic>.from(value);
+                      _addLog('   Alert data: $alertMap');
+                      final timestamp = _normalizeTimestamp(
+                          alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0
+                      );
+
+                      if (timestamp > latestTimestamp) {
+                        latestTimestamp = timestamp;
+                      }
+
+                      _parseAndProcessAlert(
+                        key: key,
+                        alertMap: alertMap,
+                        alertType: 'PROXIMITY',
+                        alertCategory: 'proximity',
+                      );
+                    } else {
+                      _addLog('   ⚠️ Alert $key has invalid format: ${value.runtimeType}');
+                    }
+                  });
+                } catch (e) {
+                  _addLog('   ❌ Error parsing PROXIMITY: $e');
                 }
-              });
-            } else {
-              _addLog('📍 No PROXIMITY alerts found');
-            }
+              } else {
+                _addLog('📍 No PROXIMITY key found in data');
+              }
 
-            // Parse SOUND_HAZARD alerts
-            if (data.containsKey('SOUND_HAZARD')) {
-              _addLog('');
-              _addLog('🔊 SOUND_HAZARD ALERTS:');
-              final soundData = Map<String, dynamic>.from(data['SOUND_HAZARD'] as Map);
-              _addLog('   Count: ${soundData.length}');
+              // Parse SOUND_HAZARD alerts
+              if (data.containsKey('SOUND_HAZARD')) {
+                _addLog('');
+                _addLog('🔊 SOUND_HAZARD ALERTS:');
+                try {
+                  final soundData = Map<String, dynamic>.from(data['SOUND_HAZARD'] as Map);
+                  _addLog('   Alert IDs: ${soundData.keys.toList()}');
+                  _addLog('   Count: ${soundData.length}');
 
-              soundData.forEach((key, value) {
-                if (value is Map) {
-                  final alertMap = Map<String, dynamic>.from(value);
-                  final timestamp = _normalizeTimestamp(alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0);
+                  soundData.forEach((key, value) {
+                    totalAlerts++;
+                    _addLog('   Processing alert: $key');
+                    if (value is Map) {
+                      final alertMap = Map<String, dynamic>.from(value);
+                      _addLog('   Alert data: $alertMap');
+                      final timestamp = _normalizeTimestamp(
+                          alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0
+                      );
 
-                  if (timestamp > latestTimestamp) {
-                    latestTimestamp = timestamp;
-                  }
+                      if (timestamp > latestTimestamp) {
+                        latestTimestamp = timestamp;
+                      }
 
-                  _parseAndProcessAlert(
-                    key: key,
-                    alertMap: alertMap,
-                    alertType: 'SOUND_HAZARD',
-                    isProximity: false,
-                  );
+                      _parseAndProcessAlert(
+                        key: key,
+                        alertMap: alertMap,
+                        alertType: 'SOUND_HAZARD',
+                        alertCategory: 'sound',
+                      );
+                    } else {
+                      _addLog('   ⚠️ Alert $key has invalid format: ${value.runtimeType}');
+                    }
+                  });
+                } catch (e) {
+                  _addLog('   ❌ Error parsing SOUND_HAZARD: $e');
                 }
-              });
-            } else {
-              _addLog('🔊 No SOUND_HAZARD alerts found');
-            }
+              } else {
+                _addLog('🔊 No SOUND_HAZARD key found in data');
+              }
 
-            // ✅ Update Firebase last update from latest alert
-            if (latestTimestamp > 0) {
-              firebaseLastUpdate.value = DateTime.fromMillisecondsSinceEpoch(latestTimestamp);
-              _addLog('⏱️ Latest Firebase Update: ${firebaseLastUpdate.value}');
-            }
+              // Parse CRY_DETECTION alerts
+              if (data.containsKey('CRY_DETECTION')) {
+                _addLog('');
+                _addLog('👶 CRY_DETECTION ALERTS:');
+                try {
+                  final cryData = Map<String, dynamic>.from(data['CRY_DETECTION'] as Map);
+                  _addLog('   Alert IDs: ${cryData.keys.toList()}');
+                  _addLog('   Count: ${cryData.length}');
 
-            // Summary
-            _addLog('');
-            _addLog('📊 SUMMARY:');
-            _addLog('   Total Proximity: ${proximityAlerts.length}');
-            _addLog('   Total Sound: ${soundAlerts.length}');
-            _addLog('   Tracked Alerts: ${_lastSeenTimestamps.keys.length}');
+                  cryData.forEach((key, value) {
+                    totalAlerts++;
+                    _addLog('   Processing alert: $key');
+                    if (value is Map) {
+                      final alertMap = Map<String, dynamic>.from(value);
+                      _addLog('   Alert data: $alertMap');
+                      final timestamp = _normalizeTimestamp(
+                          alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0
+                      );
+
+                      if (timestamp > latestTimestamp) {
+                        latestTimestamp = timestamp;
+                      }
+
+                      _parseAndProcessAlert(
+                        key: key,
+                        alertMap: alertMap,
+                        alertType: 'CRY_DETECTION',
+                        alertCategory: 'cry',
+                      );
+                    } else {
+                      _addLog('   ⚠️ Alert $key has invalid format: ${value.runtimeType}');
+                    }
+                  });
+                } catch (e) {
+                  _addLog('   ❌ Error parsing CRY_DETECTION: $e');
+                }
+              } else {
+                _addLog('👶 No CRY_DETECTION key found in data');
+              }
+
+              if (latestTimestamp > 0) {
+                firebaseLastUpdate.value = DateTime.fromMillisecondsSinceEpoch(latestTimestamp);
+                _addLog('⏱️ Latest Firebase Update: ${firebaseLastUpdate.value}');
+              }
+
+              _addLog('');
+              _addLog('📊 PARSING SUMMARY:');
+              _addLog('   Total Alerts Found: $totalAlerts');
+              _addLog('   Total Proximity: ${proximityAlerts.length}');
+              _addLog('   Total Sound: ${soundAlerts.length}');
+              _addLog('   Total Cry: ${cryAlerts.length}');
+              _addLog('   Tracked Alert IDs: ${_lastSeenTimestamps.keys.length}');
+
+            } catch (e) {
+              _addLog('❌ CRITICAL ERROR parsing data: $e');
+              _addLog('Stack trace: ${StackTrace.current}');
+            }
 
           } else {
-            _addLog('⚠️ No data in database');
+            _addLog('⚠️ No data in database or snapshot is null');
+            _addLog('📍 Path: childSafety/alarms');
+            _addLog('💡 Please check:');
+            _addLog('   1. Data exists at this path in Firebase');
+            _addLog('   2. Firebase rules allow read access');
+            _addLog('   3. Database URL is correct');
             connectionStatus.value = '⚠️ No data';
             firebaseLastUpdate.value = null;
           }
@@ -187,15 +274,21 @@ class SafetyMonitoringController extends GetxController {
           _addLog('');
         },
         onError: (error) {
-          _addLog('❌ FIREBASE ERROR: $error');
+          _addLog('❌ FIREBASE LISTENER ERROR: $error');
+          _addLog('Error type: ${error.runtimeType}');
+          _addLog('Error details: ${error.toString()}');
           connectionStatus.value = '🔴 Error';
           isLoading.value = false;
         },
+        cancelOnError: false,
       );
 
-      _addLog('✅ Real-time listener attached');
+      _addLog('✅ Real-time listener attached successfully');
+      _addLog('⏳ Waiting for Firebase data...');
+
     } catch (e) {
-      _addLog('❌ Listener setup error: $e');
+      _addLog('❌ CRITICAL: Listener setup error: $e');
+      _addLog('Stack trace: ${StackTrace.current}');
       connectionStatus.value = '🔴 Connection failed';
       isLoading.value = false;
     }
@@ -205,14 +298,13 @@ class SafetyMonitoringController extends GetxController {
     required String key,
     required dynamic alertMap,
     required String alertType,
-    required bool isProximity,
+    required String alertCategory,
   }) {
     try {
       final alert = Map<String, dynamic>.from(alertMap as Map);
       final alertId = '${alertType}_$key';
 
-      // Extract fields
-      final message = alert['message'] ?? 'No message';
+      final message = alert['message'] ?? alert['type'] ?? 'Unknown Alert';
       final status = alert['status'] ?? 'UNKNOWN';
       final rawLastUpdate = alert['lastUpdate'] ?? alert['timestamp'] ?? 0;
       final timestamp = _normalizeTimestamp(rawLastUpdate);
@@ -225,66 +317,98 @@ class SafetyMonitoringController extends GetxController {
       _addLog('      Normalized: $timestamp');
       _addLog('      Formatted: $formattedTime');
 
-      // Add to list
-      if (isProximity) {
-        proximityAlerts.add({
-          'id': key,
-          'message': message,
-          'status': status,
-          'timestamp': timestamp,
-        });
-      } else {
-        soundAlerts.add({
-          'id': key,
-          'message': message,
-          'status': status,
-          'timestamp': timestamp,
-        });
+      // Add to appropriate list
+      final alertData = {
+        'id': key,
+        'message': message,
+        'status': status,
+        'timestamp': timestamp,
+        'type': alertType,
+      };
+
+      switch (alertCategory) {
+        case 'proximity':
+          proximityAlerts.add(alertData);
+          _addLog('      ✅ Added to proximityAlerts');
+          break;
+        case 'sound':
+          soundAlerts.add(alertData);
+          _addLog('      ✅ Added to soundAlerts');
+          break;
+        case 'cry':
+          cryAlerts.add(alertData);
+          _addLog('      ✅ Added to cryAlerts');
+          break;
       }
 
       // Handle notifications for ACTIVE alerts
-      if (status == 'ACTIVE') {
+      if (status.toLowerCase() == 'active') {
         _handleAlertNotification(
           alertId: alertId,
           timestamp: timestamp,
           message: message,
-          isProximity: isProximity,
+          alertCategory: alertCategory,
         );
       } else {
         _addLog('      ℹ️ Skipping notification (status: $status)');
       }
     } catch (e) {
-      _addLog('   ❌ Parse error: $e');
+      _addLog('   ❌ Parse error for alert $key: $e');
+      _addLog('   Stack trace: ${StackTrace.current}');
     }
   }
 
   int _normalizeTimestamp(dynamic rawTimestamp) {
-    if (rawTimestamp == null) return 0;
+    if (rawTimestamp == null) {
+      _addLog('      ⚠️ Null timestamp received');
+      return 0;
+    }
 
     int timestamp = 0;
 
-    if (rawTimestamp is int) {
-      timestamp = rawTimestamp;
-    } else if (rawTimestamp is double) {
-      timestamp = rawTimestamp.toInt();
-    } else if (rawTimestamp is String) {
-      timestamp = int.tryParse(rawTimestamp) ?? 0;
-    }
-
-    // Smart conversion
-    if (timestamp > 0 && timestamp < 10000000000) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final diff = (now - timestamp).abs();
-
-      if (diff > 3155760000000) {
-        timestamp = timestamp * 1000;
+    try {
+      if (rawTimestamp is int) {
+        timestamp = rawTimestamp;
+        _addLog('      📅 Timestamp is int: $timestamp');
+      } else if (rawTimestamp is double) {
+        timestamp = rawTimestamp.toInt();
+        _addLog('      📅 Timestamp is double, converted: $timestamp');
+      } else if (rawTimestamp is String) {
+        _addLog('      📅 Timestamp is string: $rawTimestamp');
+        // Try parsing as ISO 8601
+        try {
+          final dateTime = DateTime.parse(rawTimestamp);
+          timestamp = dateTime.millisecondsSinceEpoch;
+          _addLog('      ✅ Parsed ISO 8601 to milliseconds: $timestamp');
+          return timestamp;
+        } catch (e) {
+          _addLog('      ⚠️ Not ISO 8601, trying integer parse...');
+          timestamp = int.tryParse(rawTimestamp) ?? 0;
+          _addLog('      📅 Parsed as int: $timestamp');
+        }
+      } else {
+        _addLog('      ❌ Unknown timestamp type: ${rawTimestamp.runtimeType}');
+        return 0;
       }
-    }
 
-    return timestamp;
+      // Smart conversion for seconds vs milliseconds
+      if (timestamp > 0 && timestamp < 10000000000) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final diff = (now - timestamp).abs();
+
+        if (diff > 3155760000000) {
+          _addLog('      🔄 Converting seconds to milliseconds');
+          timestamp = timestamp * 1000;
+        }
+      }
+
+      return timestamp;
+    } catch (e) {
+      _addLog('      ❌ Error normalizing timestamp: $e');
+      return 0;
+    }
   }
 
-  // ✅ IMPROVED: Format timestamp with relative and absolute time
   String formatTimestamp(int timestamp) {
     if (timestamp == 0) return 'Unknown';
 
@@ -329,7 +453,6 @@ class SafetyMonitoringController extends GetxController {
     }
   }
 
-  // ✅ NEW: Get formatted Firebase last update time
   String getFirebaseLastUpdateFormatted() {
     if (firebaseLastUpdate.value == null) {
       return 'No updates yet';
@@ -354,7 +477,6 @@ class SafetyMonitoringController extends GetxController {
     return 'Recently';
   }
 
-  // ✅ NEW: Get connection status based on Firebase data
   String getConnectionStatusDisplay() {
     if (connectionStatus.value.contains('Error')) {
       return '🔴 Connection Failed';
@@ -372,7 +494,7 @@ class SafetyMonitoringController extends GetxController {
     required String alertId,
     required int timestamp,
     required String message,
-    required bool isProximity,
+    required String alertCategory,
   }) {
     if (_lastSeenTimestamps.containsKey(alertId)) {
       final lastSeenTimestamp = _lastSeenTimestamps[alertId]!;
@@ -383,7 +505,7 @@ class SafetyMonitoringController extends GetxController {
         _addLog('      ✅ CONDITION MET: Timestamp changed + Status ACTIVE');
 
         _lastSeenTimestamps[alertId] = timestamp;
-        _sendNotification(alertId, message, isProximity);
+        _sendNotification(alertId, message, alertCategory);
       } else {
         _addLog('      ℹ️ Duplicate (same timestamp - no notification)');
       }
@@ -394,20 +516,29 @@ class SafetyMonitoringController extends GetxController {
     }
   }
 
-  void _sendNotification(String alertId, String message, bool isProximity) {
+  void _sendNotification(String alertId, String message, String alertCategory) {
     try {
       _addLog('      📤 Sending notification...');
 
-      if (isProximity) {
-        NotificationService.showProximityAlert(
-          message: message,
-          alertId: alertId,
-        );
-      } else {
-        NotificationService.showSoundHazardAlert(
-          message: message,
-          alertId: alertId,
-        );
+      switch (alertCategory) {
+        case 'proximity':
+          NotificationService.showProximityAlert(
+            message: message,
+            alertId: alertId,
+          );
+          break;
+        case 'sound':
+          NotificationService.showSoundHazardAlert(
+            message: message,
+            alertId: alertId,
+          );
+          break;
+        case 'cry':
+          NotificationService.showCryDetectionAlert(
+            message: message,
+            alertId: alertId,
+          );
+          break;
       }
 
       _addLog('      ✅ Notification sent successfully!');
@@ -416,20 +547,29 @@ class SafetyMonitoringController extends GetxController {
     }
   }
 
-  Future<void> testNotification(bool isProximity) async {
+  Future<void> testNotification(String alertType) async {
     try {
-      _addLog('🧪 Testing ${isProximity ? 'PROXIMITY' : 'SOUND'} notification...');
+      _addLog('🧪 Testing $alertType notification...');
 
-      if (isProximity) {
-        await NotificationService.showProximityAlert(
-          message: 'This is a TEST proximity alert',
-          alertId: 'test_proximity_${DateTime.now().millisecondsSinceEpoch}',
-        );
-      } else {
-        await NotificationService.showSoundHazardAlert(
-          message: 'This is a TEST sound alert',
-          alertId: 'test_sound_${DateTime.now().millisecondsSinceEpoch}',
-        );
+      switch (alertType) {
+        case 'proximity':
+          await NotificationService.showProximityAlert(
+            message: 'This is a TEST proximity alert',
+            alertId: 'test_proximity_${DateTime.now().millisecondsSinceEpoch}',
+          );
+          break;
+        case 'sound':
+          await NotificationService.showSoundHazardAlert(
+            message: 'This is a TEST sound alert',
+            alertId: 'test_sound_${DateTime.now().millisecondsSinceEpoch}',
+          );
+          break;
+        case 'cry':
+          await NotificationService.showCryDetectionAlert(
+            message: 'This is a TEST cry detection alert',
+            alertId: 'test_cry_${DateTime.now().millisecondsSinceEpoch}',
+          );
+          break;
       }
 
       _addLog('✅ Test notification sent!');
@@ -441,6 +581,26 @@ class SafetyMonitoringController extends GetxController {
   Future<void> clearAllLogs() async {
     debugLogs.clear();
     _addLog('🧹 Logs cleared');
+  }
+
+  // Manual refresh method for testing
+  Future<void> manualRefresh() async {
+    _addLog('🔄 Manual refresh triggered');
+    isLoading.value = true;
+
+    try {
+      final snapshot = await _alarmRef?.get();
+      if (snapshot != null && snapshot.exists) {
+        _addLog('✅ Manual fetch successful');
+        _addLog('📊 Data: ${snapshot.value}');
+      } else {
+        _addLog('⚠️ No data found on manual fetch');
+      }
+    } catch (e) {
+      _addLog('❌ Manual refresh error: $e');
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   List<Color> getBackgroundGradientColors() {

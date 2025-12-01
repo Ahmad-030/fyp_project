@@ -1,782 +1,795 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../Theme/App_theme.dart';
 import 'Controller/Setting_Controller.dart';
-import '../Theme/app_theme.dart';
-import 'Controller/Setting_Controller.dart' as controller;
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+class OutroScreen extends StatelessWidget {
+  const OutroScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final SettingsController controller = Get.put(SettingsController());
+    final OutroController controller = Get.put(OutroController());
 
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: AppTheme.backgroundGradient,
+            colors: controller.getBackgroundGradientColors(),
             stops: const [0.0, 0.3, 0.7, 1.0],
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
+        child: Stack(
+          children: [
+            // Animated background
+            _buildAnimatedBackground(controller),
+
+            // Main content
+            SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      _buildHeader(controller),
+                      const SizedBox(height: 40),
+                      _buildProfileAvatar(controller),
+                      const SizedBox(height: 32),
+                      _buildAccountInfoCard(controller),
+                      const SizedBox(height: 40),
+                      _buildIoTStatusCard(controller),
+                      const SizedBox(height: 40),
+                      _buildSwipeToLogout(controller, context),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedBackground(OutroController controller) {
+    return AnimatedBuilder(
+      animation: controller.pulseController,
+      builder: (context, child) {
+        return CustomPaint(
+          size: Size.infinite,
+          painter: OutroBackgroundPainter(
+            animationValue: controller.pulseAnimation.value,
+            accentColor: controller.getAccentColor(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(OutroController controller) {
+    return AnimatedBuilder(
+      animation: controller.mainController,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: controller.fadeAnimation,
+          child: Transform.translate(
+            offset: Offset(0, controller.slideAnimation.value),
+            child: Row(
+              children: [
+                // Back button
+                GestureDetector(
+                  onTap: () => Get.back(),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: controller.getCardGradient(),
+                      ),
+                      border: Border.all(
+                        color: controller.getAccentColor().withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.arrow_back_ios_rounded,
+                      color: controller.getAccentColor(),
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Account',
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      Text(
+                        'Manage your profile & device',
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileAvatar(OutroController controller) {
+    return AnimatedBuilder(
+      animation: controller.pulseController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: controller.pulseAnimation.value,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  controller.getPrimaryColor(),
+                  controller.getAccentColor(),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: controller.getAccentColor().withOpacity(0.4),
+                  blurRadius: 30,
+                  spreadRadius: 10,
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer ring
+                Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                // Inner avatar
+                Obx(() => Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                  child: Center(
+                    child: Text(
+                      controller.fullName.value.isNotEmpty
+                          ? controller.fullName.value[0].toUpperCase()
+                          : 'U',
+                      style: GoogleFonts.poppins(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                )),
+                // Online indicator
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF059669),
+                      border: Border.all(
+                        color: controller.getPrimaryColor(),
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF059669).withOpacity(0.5),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAccountInfoCard(OutroController controller) {
+    return AnimatedBuilder(
+      animation: controller.mainController,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: controller.fadeAnimation,
+          child: Transform.translate(
+            offset: Offset(0, controller.slideAnimation.value),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: controller.getCardGradient(),
+                ),
+                border: Border.all(
+                  color: controller.getAccentColor().withOpacity(0.2),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: controller.getAccentColor().withOpacity(0.1),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(),
-                  const SizedBox(height: 32),
-
-                  // ✅ UPDATED: Real-time Last Update Section with Firebase Data
-                  _buildRealtimeUpdateSection(controller),
+                  // Section header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: controller.getAccentColor().withOpacity(0.2),
+                        ),
+                        child: Icon(
+                          Icons.person_rounded,
+                          color: controller.getAccentColor(),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Account Information',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 24),
 
-                  _buildUserSection(controller),
-                  const SizedBox(height: 24),
-                  _buildTestSection(controller),
-                  const SizedBox(height: 24),
-                  _buildDataSection(controller),
-                  const SizedBox(height: 24),
-                  _buildLogoutButton(controller),
-                  const SizedBox(height: 24),
+                  // Info rows
+                  _buildInfoRow(
+                    controller: controller,
+                    icon: Icons.badge_rounded,
+                    label: 'Full Name',
+                    valueWidget: Obx(() => Text(
+                      controller.fullName.value.isEmpty
+                          ? 'Loading...'
+                          : controller.fullName.value,
+                      style: GoogleFonts.roboto(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    )),
+                  ),
+                  _buildDivider(controller),
+
+                  _buildInfoRow(
+                    controller: controller,
+                    icon: Icons.email_rounded,
+                    label: 'Email Address',
+                    valueWidget: Obx(() => Text(
+                      controller.email.value,
+                      style: GoogleFonts.roboto(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    )),
+                  ),
+                  _buildDivider(controller),
+
+                  _buildInfoRow(
+                    controller: controller,
+                    icon: Icons.phone_rounded,
+                    label: 'Phone Number',
+                    valueWidget: Obx(() => Text(
+                      controller.phoneNumber.value.isEmpty
+                          ? 'Loading...'
+                          : controller.phoneNumber.value,
+                      style: GoogleFonts.roboto(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    )),
+                  ),
+                  _buildDivider(controller),
+
+                  _buildInfoRow(
+                    controller: controller,
+                    icon: Icons.calendar_today_rounded,
+                    label: 'Member Since',
+                    valueWidget: Obx(() => Text(
+                      controller.memberSince.value.isEmpty
+                          ? 'Loading...'
+                          : controller.memberSince.value,
+                      style: GoogleFonts.roboto(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    )),
+                  ),
                 ],
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
-  }
-
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: AppTheme.cardGradient,
-                ),
-                border: Border.all(
-                  color: AppTheme.secondaryAccent.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: const Icon(
-                Icons.settings,
-                color: AppTheme.secondaryAccent,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Text(
-              'Settings',
-              style: AppTheme.headingXL,
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Manage your account and preferences',
-          style: AppTheme.subtitle,
-        ),
-      ],
-    );
-  }
-
-  // ✅ UPDATED: Real-time Update Section with Firebase Last Update
-  Widget _buildRealtimeUpdateSection(SettingsController controller) {
-    return Obx(() => Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.secondaryAccent.withOpacity(0.15),
-            AppTheme.secondaryAccent.withOpacity(0.05),
-          ],
-        ),
-        border: Border.all(
-          color: AppTheme.secondaryAccent.withOpacity(0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.secondaryAccent.withOpacity(0.2),
-            blurRadius: 15,
-            spreadRadius: 3,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.secondaryAccent.withOpacity(0.2),
-                ),
-                child: const Icon(
-                  Icons.update,
-                  color: AppTheme.secondaryAccent,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Real-time Monitoring',
-                style: AppTheme.headingSmall,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ✅ Connection Status
-          Row(
-            children: [
-              const Icon(
-                Icons.circle,
-                size: 12,
-                color: Colors.green,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Status',
-                      style: AppTheme.caption,
-                    ),
-                    Text(
-                      controller.connectionStatus.value,
-                      style: AppTheme.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ✅ UPDATED: Firebase Last Update Time
-          Row(
-            children: [
-              const Icon(
-                Icons.access_time,
-                size: 12,
-                color: AppTheme.secondaryAccent,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Firebase Last Update',
-                      style: AppTheme.caption,
-                    ),
-                    Text(
-                      controller.getFirebaseLastUpdateFormatted(),
-                      style: AppTheme.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: controller.firebaseLastUpdate.value != null
-                            ? Colors.white
-                            : Colors.white.withOpacity(0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ✅ Local Refresh Time
-          Row(
-            children: [
-              const Icon(
-                Icons.refresh,
-                size: 12,
-                color: AppTheme.secondaryAccent,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Local Refresh',
-                      style: AppTheme.caption,
-                    ),
-                    Text(
-                      _formatLocalRefreshTime(controller.lastRefreshTime.value),
-                      style: AppTheme.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ✅ Alert Counts
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.red.withOpacity(0.1),
-                    border: Border.all(
-                      color: Colors.red.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${controller.proximityAlerts.length}',
-                        style: AppTheme.headingLarge.copyWith(
-                          color: Colors.red,
-                        ),
-                      ),
-                      Text(
-                        'Proximity',
-                        style: AppTheme.caption,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.orange.withOpacity(0.1),
-                    border: Border.all(
-                      color: Colors.orange.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${controller.soundAlerts.length}',
-                        style: AppTheme.headingLarge.copyWith(
-                          color: Colors.orange,
-                        ),
-                      ),
-                      Text(
-                        'Sound',
-                        style: AppTheme.caption,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ));
-  }
-
-  // ✅ Helper function to format local refresh time
-  String _formatLocalRefreshTime(DateTime lastRefresh) {
-    final now = DateTime.now();
-    final diff = now.difference(lastRefresh);
-
-    if (diff.inSeconds < 60) {
-      return '${diff.inSeconds}s ago • ${lastRefresh.hour.toString().padLeft(2, '0')}:${lastRefresh.minute.toString().padLeft(2, '0')}';
-    }
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m ago • ${lastRefresh.hour.toString().padLeft(2, '0')}:${lastRefresh.minute.toString().padLeft(2, '0')}';
-    }
-    if (diff.inHours < 24) {
-      return '${diff.inHours}h ago • ${lastRefresh.hour.toString().padLeft(2, '0')}:${lastRefresh.minute.toString().padLeft(2, '0')}';
-    }
-    return 'Recently';
-  }
-
-  Widget _buildUserSection(SettingsController controller) {
-    return Obx(() {
-      final user = controller.currentUser.value;
-
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: AppTheme.cardGradient,
-          ),
-          border: Border.all(
-            color: AppTheme.secondaryAccent.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.secondaryAccent.withOpacity(0.2),
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: AppTheme.secondaryAccent,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Account Information',
-                  style: AppTheme.headingSmall,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow(
-              icon: Icons.person_outline,
-              label: 'Name',
-              value: controller.fullName.value.isEmpty
-                  ? 'Loading...'
-                  : controller.fullName.value,
-            ),
-            const SizedBox(height: 12),
-            _buildInfoRow(
-              icon: Icons.email_outlined,
-              label: 'Email',
-              value: user?.email ?? 'Not available',
-            ),
-            const SizedBox(height: 12),
-            _buildInfoRow(
-              icon: Icons.phone_outlined,
-              label: 'Phone',
-              value: controller.phoneNumber.value.isEmpty
-                  ? 'Loading...'
-                  : controller.phoneNumber.value,
-            ),
-          ],
-        ),
-      );
-    });
   }
 
   Widget _buildInfoRow({
+    required OutroController controller,
     required IconData icon,
     required String label,
-    required String value,
+    required Widget valueWidget,
   }) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          color: Colors.white.withOpacity(0.6),
-          size: 20,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: AppTheme.caption,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: AppTheme.bodyLarge,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTestSection(SettingsController controller) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: AppTheme.cardGradient,
-        ),
-        border: Border.all(
-          color: AppTheme.secondaryAccent.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.warningOrange.withOpacity(0.2),
-                ),
-                child: const Icon(
-                  Icons.notifications_active,
-                  color: AppTheme.warningOrange,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Test Notifications',
-                style: AppTheme.headingSmall,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildTestButton(
-            label: 'Test Proximity Alert',
-            icon: Icons.location_on_rounded,
-            color: AppTheme.warningRed,
-            onPressed: () => controller.testProximityNotification(),
-          ),
-          const SizedBox(height: 12),
-          _buildTestButton(
-            label: 'Test Sound Hazard Alert',
-            icon: Icons.volume_up_rounded,
-            color: AppTheme.warningOrange,
-            onPressed: () => controller.testSoundNotification(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTestButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [
-              color.withOpacity(0.15),
-              color.withOpacity(0.05),
-            ],
-          ),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: AppTheme.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: controller.getAccentColor().withOpacity(0.1),
             ),
-            Icon(
-              Icons.play_arrow_rounded,
-              color: color,
+            child: Icon(
+              icon,
+              color: controller.getAccentColor().withOpacity(0.8),
               size: 20,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.roboto(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.6),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                valueWidget,
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildDataSection(SettingsController controller) {
+  Widget _buildDivider(OutroController controller) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      height: 1,
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
-          colors: AppTheme.cardGradient,
-        ),
-        border: Border.all(
-          color: AppTheme.secondaryAccent.withOpacity(0.2),
-          width: 1,
+          colors: [
+            Colors.transparent,
+            controller.getAccentColor().withOpacity(0.2),
+            Colors.transparent,
+          ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    );
+  }
+
+  Widget _buildIoTStatusCard(OutroController controller) {
+    return AnimatedBuilder(
+      animation: controller.mainController,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: controller.fadeAnimation,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF059669).withOpacity(0.15),
+                  const Color(0xFF059669).withOpacity(0.05),
+                ],
+              ),
+              border: Border.all(
+                color: const Color(0xFF059669).withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                // Animated IoT indicator
+                AnimatedBuilder(
+                  animation: controller.pulseController,
+                  builder: (context, child) {
+                    return Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF059669).withOpacity(0.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF059669).withOpacity(
+                                0.3 * controller.pulseAnimation.value),
+                            blurRadius: 15 * controller.pulseAnimation.value,
+                            spreadRadius: 5 * controller.pulseAnimation.value,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.sensors_rounded,
+                        color: Color(0xFF059669),
+                        size: 28,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF059669),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF059669).withOpacity(0.5),
+                                  blurRadius: 6,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'IoT Device Active',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF059669),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ESP32 sensors are monitoring your child\'s safety',
+                        style: GoogleFonts.roboto(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSwipeToLogout(OutroController controller, BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width - 48;
+    const buttonWidth = 70.0;
+    final maxSwipeDistance = screenWidth - buttonWidth - 16;
+
+    return AnimatedBuilder(
+      animation: controller.mainController,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: controller.fadeAnimation,
+          child: Column(
             children: [
+              // Warning text
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.warningRed.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  color: controller.getWarningColor().withOpacity(0.1),
+                  border: Border.all(
+                    color: controller.getWarningColor().withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.delete_outline,
-                  color: AppTheme.warningRed,
-                  size: 20,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: controller.getWarningColor(),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'This will disconnect your IoT device',
+                      style: GoogleFonts.roboto(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: controller.getWarningColor(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(height: 20),
+
+              // Swipe button container
+              Container(
+                height: 70,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(35),
+                  gradient: LinearGradient(
+                    colors: [
+                      controller.getWarningColor().withOpacity(0.15),
+                      controller.getWarningColor().withOpacity(0.05),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: controller.getWarningColor().withOpacity(0.4),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: controller.getWarningColor().withOpacity(0.2),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // Progress fill
+                    Obx(() => AnimatedContainer(
+                      duration: const Duration(milliseconds: 100),
+                      width: (screenWidth * controller.swipeProgress.value).clamp(0.0, screenWidth),
+                      height: 70,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(35),
+                        gradient: LinearGradient(
+                          colors: [
+                            controller.getWarningColor().withOpacity(0.4),
+                            controller.getWarningColor().withOpacity(0.2),
+                          ],
+                        ),
+                      ),
+                    )),
+
+                    // Center text with icon hints
+                    Center(
+                      child: Obx(() => AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: controller.showSwipeHint.value ? 1.0 : 0.5,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedBuilder(
+                              animation: controller.swipeHintController,
+                              builder: (context, child) {
+                                return Transform.translate(
+                                  offset: Offset(controller.swipeHintAnimation.value * 10, 0),
+                                  child: Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: controller.getWarningColor().withOpacity(0.6),
+                                    size: 24,
+                                  ),
+                                );
+                              },
+                            ),
+                            Icon(
+                              Icons.power_settings_new_rounded,
+                              color: controller.getWarningColor().withOpacity(0.8),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Swipe to Turn Off & Logout',
+                              style: GoogleFonts.roboto(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: controller.getWarningColor().withOpacity(0.9),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            AnimatedBuilder(
+                              animation: controller.swipeHintController,
+                              builder: (context, child) {
+                                return Transform.translate(
+                                  offset: Offset(controller.swipeHintAnimation.value * 10, 0),
+                                  child: Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: controller.getWarningColor().withOpacity(0.6),
+                                    size: 24,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      )),
+                    ),
+
+                    // Swipe button
+                    Obx(() => Positioned(
+                      left: 4 + (maxSwipeDistance * controller.swipeProgress.value),
+                      top: 4,
+                      child: GestureDetector(
+                        onHorizontalDragUpdate: (details) {
+                          if (!controller.isLoggingOut.value) {
+                            final newProgress = controller.swipeProgress.value +
+                                (details.delta.dx / maxSwipeDistance);
+                            controller.updateSwipeProgress(newProgress);
+                          }
+                        },
+                        onHorizontalDragEnd: (details) {
+                          if (!controller.isLoggingOut.value) {
+                            controller.resetSwipe();
+                          }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 100),
+                          width: buttonWidth - 8,
+                          height: buttonWidth - 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: controller.swipeProgress.value > 0.7
+                                  ? [const Color(0xFFDC2626), const Color(0xFFEF4444)]
+                                  : controller.getSwipeButtonGradient(),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (controller.swipeProgress.value > 0.7
+                                    ? const Color(0xFFDC2626)
+                                    : controller.getWarningColor()).withOpacity(0.5),
+                                blurRadius: 15,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: controller.isLoggingOut.value
+                              ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                              : Icon(
+                            controller.swipeProgress.value > 0.7
+                                ? Icons.power_off_rounded
+                                : Icons.power_settings_new_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+
+              // Footer text
+              const SizedBox(height: 24),
               Text(
-                'Data Management',
-                style: AppTheme.headingSmall,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildActionButton(
-            label: 'Clear All Alerts',
-            icon: Icons.cleaning_services_outlined,
-            color: AppTheme.warningRed,
-            onPressed: () => _showDeleteConfirmation(
-              context: Get.context!,
-              title: 'Clear All Alerts?',
-              message:
-              'This will permanently delete all proximity and sound hazard alerts from the database.',
-              onConfirm: () => controller.clearAllAlerts(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildActionButton(
-            label: 'Clear Proximity Alerts',
-            icon: Icons.location_off_outlined,
-            color: AppTheme.warningRed,
-            onPressed: () => _showDeleteConfirmation(
-              context: Get.context!,
-              title: 'Clear Proximity Alerts?',
-              message: 'This will delete all proximity alerts from the database.',
-              onConfirm: () => controller.clearProximityAlerts(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildActionButton(
-            label: 'Clear Sound Alerts',
-            icon: Icons.volume_off_outlined,
-            color: AppTheme.warningOrange,
-            onPressed: () => _showDeleteConfirmation(
-              context: Get.context!,
-              title: 'Clear Sound Alerts?',
-              message: 'This will delete all sound hazard alerts from the database.',
-              onConfirm: () => controller.clearSoundAlerts(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [
-              color.withOpacity(0.15),
-              color.withOpacity(0.05),
-            ],
-          ),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: AppTheme.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
+                'You can reconnect anytime by logging in again',
+                style: GoogleFonts.roboto(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white.withOpacity(0.5),
                 ),
+                textAlign: TextAlign.center,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutButton(SettingsController controller) {
-    return InkWell(
-      onTap: () => _showLogoutConfirmation(controller),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.warningRed.withOpacity(0.2),
-              AppTheme.warningRed.withOpacity(0.1),
             ],
           ),
-          border: Border.all(
-            color: AppTheme.warningRed.withOpacity(0.4),
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.logout,
-              color: AppTheme.warningRed,
-              size: 22,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Logout',
-              style: AppTheme.buttonSmall.copyWith(
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
+  }
+}
+
+// Custom painter for animated background
+class OutroBackgroundPainter extends CustomPainter {
+  final double animationValue;
+  final Color accentColor;
+
+  OutroBackgroundPainter({
+    required this.animationValue,
+    required this.accentColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    // Draw floating circles
+    final random = math.Random(42);
+    for (int i = 0; i < 15; i++) {
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
+      final radius = 3.0 + random.nextDouble() * 5;
+
+      paint.color = accentColor.withOpacity(0.05 + random.nextDouble() * 0.08);
+      canvas.drawCircle(
+        Offset(x, y),
+        radius * animationValue,
+        paint,
+      );
+    }
   }
 
-  void _showDeleteConfirmation({
-    required BuildContext context,
-    required String title,
-    required String message,
-    required VoidCallback onConfirm,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.primaryMedium,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          title,
-          style: AppTheme.headingSmall,
-        ),
-        content: Text(
-          message,
-          style: AppTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: AppTheme.linkText.copyWith(
-                color: Colors.white.withOpacity(0.7),
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onConfirm();
-            },
-            child: Text(
-              'Delete',
-              style: AppTheme.linkText.copyWith(
-                color: AppTheme.warningRed,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLogoutConfirmation(SettingsController controller) {
-    showDialog(
-      context: Get.context!,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.primaryMedium,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          'Logout',
-          style: AppTheme.headingSmall,
-        ),
-        content: Text(
-          'Are you sure you want to logout?',
-          style: AppTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: AppTheme.linkText.copyWith(
-                color: Colors.white.withOpacity(0.7),
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              controller.logout();
-            },
-            child: Text(
-              'Logout',
-              style: AppTheme.linkText.copyWith(
-                color: AppTheme.warningRed,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

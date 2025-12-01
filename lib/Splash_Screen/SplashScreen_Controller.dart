@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../IntroScreen/IntroScreen.dart';
 import '../Services/Auth_Service.dart';
 import '../Onboarding_screens/Onboarding_Ui.dart';
-import '../HomeScreen/SafetyMonitoring_ui.dart';
 
 class SplashController extends GetxController with GetTickerProviderStateMixin {
   // Animation Controllers
@@ -166,8 +166,9 @@ class SplashController extends GetxController with GetTickerProviderStateMixin {
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (isLoggedIn) {
-        print('User is logged in, navigating to home screen...');
-        Get.off(() => const ChildSafetyMonitoringScreen());
+        // *** UPDATED: Navigate to IntroScreen instead of SafetyMonitoring ***
+        print('User is logged in, navigating to intro screen...');
+        Get.off(() => const IntroScreen());
       } else {
         print('User is not logged in, navigating to onboarding...');
         Get.off(() => const OnboardingScreen());

@@ -6,35 +6,111 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../Services/Auth_Service.dart';
 import '../../Services/Notification_service.dart';
-import '../SafetyMonitoring_ui.dart';
 import '../../Auth_Screens/Login/Login_Ui.dart';
 
-class SettingsController extends GetxController {
+class OutroController extends GetxController with GetTickerProviderStateMixin {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseDatabase _database = FirebaseDatabase.instance;
 
+  // User data
   var currentUser = Rxn<User>();
   var isLoading = false.obs;
   var fullName = ''.obs;
   var phoneNumber = ''.obs;
+  var email = ''.obs;
+  var memberSince = ''.obs;
 
-  // ✅ Real-time monitoring status with Firebase sync
-  var connectionStatus = RxString('🟢 Connected');
-  var lastRefreshTime = Rx<DateTime>(DateTime.now());
-  var firebaseLastUpdate = Rx<DateTime?>(null);
-  var proximityAlerts = RxList<Map<String, dynamic>>();
-  var soundAlerts = RxList<Map<String, dynamic>>();
+  // Animation controllers
+  late AnimationController mainController;
+  late AnimationController pulseController;
+  late AnimationController swipeHintController;
+
+  // Animations
+  late Animation<double> fadeAnimation;
+  late Animation<double> slideAnimation;
+  late Animation<double> pulseAnimation;
+  late Animation<double> swipeHintAnimation;
+
+  // Swipe state
+  var swipeProgress = 0.0.obs;
+  var isSwipeComplete = false.obs;
+  var showSwipeHint = true.obs;
+  var isLoggingOut = false.obs;
 
   @override
   void onInit() {
     super.onInit();
+    _initializeAnimations();
+    _startAnimations();
     _loadCurrentUser();
     _loadUserData();
-    _setupRealtimeMonitoring();
+  }
+
+  void _initializeAnimations() {
+    // Main animation controller
+    mainController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    // Pulse animation controller (continuous)
+    pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    // Swipe hint animation controller
+    swipeHintController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    // Fade animation
+    fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: mainController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    ));
+
+    // Slide animation
+    slideAnimation = Tween<double>(
+      begin: 50.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: mainController,
+      curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+    ));
+
+    // Pulse animation
+    pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(
+      parent: pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    // Swipe hint animation
+    swipeHintAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: swipeHintController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  void _startAnimations() {
+    mainController.forward();
+    pulseController.repeat(reverse: true);
+    swipeHintController.repeat(reverse: true);
   }
 
   void _loadCurrentUser() {
     currentUser.value = _auth.currentUser;
+    email.value = currentUser.value?.email ?? 'Not available';
   }
 
   Future<void> _loadUserData() async {
@@ -60,331 +136,75 @@ class SettingsController extends GetxController {
 
           phoneNumber.value = userData['phone'] ?? 'Not provided';
 
+          // Format member since date
+          if (userData['createdAt'] != null) {
+            final createdAt = DateTime.fromMillisecondsSinceEpoch(userData['createdAt'] as int);
+            memberSince.value = '${_getMonthName(createdAt.month)} ${createdAt.year}';
+          } else {
+            memberSince.value = 'Recently joined';
+          }
+
           print('✅ User data loaded successfully');
         } else {
           print('⚠️ No user data found in database');
           fullName.value = 'User';
           phoneNumber.value = 'Not provided';
+          memberSince.value = 'Recently joined';
         }
       }
     } catch (e) {
       print('❌ Error loading user data: $e');
       fullName.value = 'User';
       phoneNumber.value = 'Not provided';
+      memberSince.value = 'Recently joined';
     }
   }
 
-  // ✅ Setup real-time monitoring with Firebase timestamp tracking
-  void _setupRealtimeMonitoring() {
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
+  }
+
+  // Handle swipe progress
+  void updateSwipeProgress(double progress) {
+    swipeProgress.value = progress.clamp(0.0, 1.0);
+    showSwipeHint.value = false;
+
+    if (progress >= 0.85 && !isSwipeComplete.value) {
+      isSwipeComplete.value = true;
+      _performLogout();
+    }
+  }
+
+  void resetSwipe() {
+    if (!isSwipeComplete.value) {
+      swipeProgress.value = 0.0;
+      showSwipeHint.value = true;
+    }
+  }
+
+  Future<void> _performLogout() async {
     try {
-      print('🔗 Setting up real-time monitoring...');
-      final ref = _database.ref().child('childSafety/alarms');
+      isLoggingOut.value = true;
+      print('🔌 Turning off IoT device and logging out...');
 
-      ref.onValue.listen((event) {
-        lastRefreshTime.value = DateTime.now();
-        connectionStatus.value = '🟢 Connected';
-
-        if (event.snapshot.exists) {
-          proximityAlerts.clear();
-          soundAlerts.clear();
-
-          final data = Map<String, dynamic>.from(event.snapshot.value as Map);
-          int latestTimestamp = 0;
-
-          // Parse PROXIMITY alerts
-          if (data.containsKey('PROXIMITY')) {
-            final proxData = Map<String, dynamic>.from(data['PROXIMITY'] as Map);
-            proxData.forEach((key, value) {
-              if (value is Map) {
-                final alertMap = Map<String, dynamic>.from(value);
-                final timestamp = _normalizeTimestamp(alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0);
-
-                if (timestamp > latestTimestamp) {
-                  latestTimestamp = timestamp;
-                }
-
-                proximityAlerts.add({
-                  'id': key,
-                  'message': alertMap['message'] ?? 'Proximity Alert',
-                  'status': alertMap['status'] ?? 'ACTIVE',
-                  'timestamp': timestamp,
-                });
-              }
-            });
-          }
-
-          // Parse SOUND_HAZARD alerts
-          if (data.containsKey('SOUND_HAZARD')) {
-            final soundData = Map<String, dynamic>.from(data['SOUND_HAZARD'] as Map);
-            soundData.forEach((key, value) {
-              if (value is Map) {
-                final alertMap = Map<String, dynamic>.from(value);
-                final timestamp = _normalizeTimestamp(alertMap['lastUpdate'] ?? alertMap['timestamp'] ?? 0);
-
-                if (timestamp > latestTimestamp) {
-                  latestTimestamp = timestamp;
-                }
-
-                soundAlerts.add({
-                  'id': key,
-                  'message': alertMap['message'] ?? 'Sound Alert',
-                  'status': alertMap['status'] ?? 'ACTIVE',
-                  'timestamp': timestamp,
-                });
-              }
-            });
-          }
-
-          // ✅ Update Firebase last update from latest alert
-          if (latestTimestamp > 0) {
-            firebaseLastUpdate.value = DateTime.fromMillisecondsSinceEpoch(latestTimestamp);
-            print('⏱️ Latest Firebase Update: ${firebaseLastUpdate.value}');
-          } else {
-            firebaseLastUpdate.value = null;
-          }
-
-          print('✅ Real-time data updated');
-        } else {
-          print('⚠️ No alerts data found');
-          connectionStatus.value = '⚠️ No data';
-          firebaseLastUpdate.value = null;
-        }
-      }, onError: (error) {
-        print('❌ Real-time listener error: $error');
-        connectionStatus.value = '🔴 Error';
-      });
-    } catch (e) {
-      print('❌ Error setting up monitoring: $e');
-      connectionStatus.value = '🔴 Failed';
-    }
-  }
-
-  // ✅ Normalize timestamp from Firebase
-  int _normalizeTimestamp(dynamic rawTimestamp) {
-    if (rawTimestamp == null) return 0;
-
-    int timestamp = 0;
-
-    if (rawTimestamp is int) {
-      timestamp = rawTimestamp;
-    } else if (rawTimestamp is double) {
-      timestamp = rawTimestamp.toInt();
-    } else if (rawTimestamp is String) {
-      timestamp = int.tryParse(rawTimestamp) ?? 0;
-    }
-
-    // Smart conversion for milliseconds vs seconds
-    if (timestamp > 0 && timestamp < 10000000000) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final diff = (now - timestamp).abs();
-
-      if (diff > 3155760000000) {
-        timestamp = timestamp * 1000;
-      }
-    }
-
-    return timestamp;
-  }
-
-  // ✅ Get formatted Firebase last update
-  String getFirebaseLastUpdateFormatted() {
-    if (firebaseLastUpdate.value == null) {
-      return 'No updates yet';
-    }
-
-    final lastUpdate = firebaseLastUpdate.value!;
-    final now = DateTime.now();
-    final diff = now.difference(lastUpdate);
-
-    if (diff.inSeconds <= 0) {
-      return '${diff.inSeconds}s ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
-    }
-    if (diff.inSeconds < 60) {
-      return '${diff.inSeconds}s ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
-    }
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
-    }
-    if (diff.inHours < 24) {
-      return '${diff.inHours}h ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
-    }
-    return '${diff.inDays}d ago • ${lastUpdate.hour.toString().padLeft(2, '0')}:${lastUpdate.minute.toString().padLeft(2, '0')}';
-  }
-
-  // Test proximity notification
-  Future<void> testProximityNotification() async {
-    try {
-      print('🧪 Testing proximity notification...');
-      await NotificationService.showProximityAlert(
-        message: 'This is a test proximity alert notification',
-        alertId: 'test_proximity_${DateTime.now().millisecondsSinceEpoch}',
-      );
+      // Show turning off message
       Get.snackbar(
-        'Test Notification',
-        'Proximity alert sent successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.9),
+        '🔌 Turning Off IoT Device',
+        'Disconnecting from ESP32 sensors...',
+        backgroundColor: const Color(0xFFFFA500).withOpacity(0.9),
         colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
         duration: const Duration(seconds: 2),
-      );
-      print('✅ Test proximity notification sent');
-    } catch (e) {
-      print('❌ Error: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to send test notification: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFFF6B6B).withOpacity(0.9),
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  // Test sound hazard notification
-  Future<void> testSoundNotification() async {
-    try {
-      print('🧪 Testing sound notification...');
-      await NotificationService.showSoundHazardAlert(
-        message: 'This is a test sound hazard alert notification',
-        alertId: 'test_sound_${DateTime.now().millisecondsSinceEpoch}',
-      );
-      Get.snackbar(
-        'Test Notification',
-        'Sound hazard alert sent successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-      print('✅ Test sound notification sent');
-    } catch (e) {
-      print('❌ Error: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to send test notification: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFFF6B6B).withOpacity(0.9),
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  // Clear all alerts from database
-  Future<void> clearAllAlerts() async {
-    try {
-      isLoading.value = true;
-      print('🗑️ Clearing all alerts...');
-
-      final ref = _database.ref().child('childSafety/alarms');
-      await ref.remove();
-      print('✅ All alerts cleared');
-
-      await NotificationService.cancelAllNotifications();
-      print('✅ All notifications cancelled');
-
-      Get.snackbar(
-        'Success',
-        'All alerts have been cleared',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        icon: const Icon(Icons.sensors_off_rounded, color: Colors.white),
       );
 
-      Get.back();
-      await Future.delayed(const Duration(milliseconds: 100));
-      Get.off(() => const ChildSafetyMonitoringScreen());
-    } catch (e) {
-      print('❌ Error clearing all alerts: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to clear alerts: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFFF6B6B).withOpacity(0.9),
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Clear proximity alerts only
-  Future<void> clearProximityAlerts() async {
-    try {
-      isLoading.value = true;
-      print('🗑️ Clearing proximity alerts...');
-
-      final ref = _database.ref().child('childSafety/alarms/PROXIMITY');
-      await ref.remove();
-      print('✅ Proximity alerts cleared');
-
-      Get.snackbar(
-        'Success',
-        'Proximity alerts have been cleared',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-
-      Get.back();
-      await Future.delayed(const Duration(milliseconds: 100));
-      Get.off(() => const ChildSafetyMonitoringScreen());
-    } catch (e) {
-      print('❌ Error clearing proximity alerts: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to clear proximity alerts: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFFF6B6B).withOpacity(0.9),
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Clear sound alerts only
-  Future<void> clearSoundAlerts() async {
-    try {
-      isLoading.value = true;
-      print('🗑️ Clearing sound alerts...');
-
-      final ref = _database.ref().child('childSafety/alarms/SOUND_HAZARD');
-      await ref.remove();
-      print('✅ Sound hazard alerts cleared');
-
-      Get.snackbar(
-        'Success',
-        'Sound hazard alerts have been cleared',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-
-      Get.back();
-      await Future.delayed(const Duration(milliseconds: 100));
-      Get.off(() => const ChildSafetyMonitoringScreen());
-    } catch (e) {
-      print('❌ Error clearing sound alerts: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to clear sound alerts: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFFF6B6B).withOpacity(0.9),
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Logout
-  Future<void> logout() async {
-    try {
-      print('🚪 Starting logout process...');
-      isLoading.value = true;
+      await Future.delayed(const Duration(seconds: 2));
 
       final user = _auth.currentUser;
 
@@ -408,6 +228,21 @@ class SettingsController extends GetxController {
       await NotificationService.cancelAllNotifications();
       print('✅ Notifications cancelled');
 
+      // Show success message
+      Get.snackbar(
+        '✅ IoT Device Turned Off',
+        'You have been logged out successfully',
+        backgroundColor: const Color(0xFF059669).withOpacity(0.9),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+      );
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
       print('🔄 Navigating to login...');
       Get.offAll(
             () => const LoginScreen(),
@@ -415,42 +250,68 @@ class SettingsController extends GetxController {
         duration: const Duration(milliseconds: 500),
       );
 
-      Get.snackbar(
-        'Success',
-        'Logged out successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-
       print('✅ Logout completed successfully');
     } on FirebaseAuthException catch (e) {
       print('❌ Firebase Auth Error during logout: $e');
+      isSwipeComplete.value = false;
+      swipeProgress.value = 0.0;
       Get.snackbar(
         'Error',
         'Failed to logout: ${e.message}',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFFF6B6B).withOpacity(0.9),
         colorText: Colors.white,
       );
     } catch (e) {
       print('❌ Unexpected error during logout: $e');
+      isSwipeComplete.value = false;
+      swipeProgress.value = 0.0;
       Get.snackbar(
         'Error',
         'Failed to logout: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFFF6B6B).withOpacity(0.9),
         colorText: Colors.white,
       );
     } finally {
-      isLoading.value = false;
+      isLoggingOut.value = false;
     }
   }
 
+  // Color getters matching app theme
+  List<Color> getBackgroundGradientColors() {
+    return [
+      const Color(0xFF0F2A4A),
+      const Color(0xFF1E4A6B),
+      const Color(0xFF2D6A9A),
+      const Color(0xFF4A90C2),
+    ];
+  }
+
+  List<Color> getCardGradient() {
+    return [
+      const Color(0xFF87CEEB).withOpacity(0.15),
+      const Color(0xFF4169E1).withOpacity(0.08),
+    ];
+  }
+
+  List<Color> getSwipeButtonGradient() {
+    return [
+      const Color(0xFFFF6B6B),
+      const Color(0xFFFF8E8E),
+    ];
+  }
+
+  Color getAccentColor() => const Color(0xFF87CEEB);
+  Color getPrimaryColor() => const Color(0xFF4A90C2);
+  Color getWarningColor() => const Color(0xFFFF6B6B);
+
   @override
   void onClose() {
-    print('🧹 SettingsController disposed');
+    mainController.dispose();
+    pulseController.dispose();
+    swipeHintController.dispose();
+    print('🧹 OutroController disposed');
     super.onClose();
   }
 }

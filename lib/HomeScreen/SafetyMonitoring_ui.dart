@@ -59,6 +59,8 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _buildSoundHazardSection(controller),
                     const SizedBox(height: 24),
+                    _buildCryDetectionSection(controller), // ✅ NEW
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -82,7 +84,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
             ),
             InkWell(
               onTap: () {
-                Get.to(() => const SettingsScreen());
+                Get.to(() => OutroScreen());
               },
               borderRadius: BorderRadius.circular(50),
               child: Container(
@@ -98,7 +100,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
                   ),
                 ),
                 child: const Icon(
-                  Icons.security,
+                  Icons.exit_to_app_sharp,
                   color: AppTheme.secondaryAccent,
                   size: 24,
                 ),
@@ -116,24 +118,37 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
   }
 
   Widget _buildStatusCards(SafetyMonitoringController controller) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _buildStatusCard(
-            title: 'Proximity',
-            count: controller.proximityAlerts.length,
-            icon: Icons.location_on_rounded,
-            color: AppTheme.warningRed,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatusCard(
+                title: 'Proximity',
+                count: controller.proximityAlerts.length,
+                icon: Icons.location_on_rounded,
+                color: AppTheme.warningRed,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatusCard(
+                title: 'Sound',
+                count: controller.soundAlerts.length,
+                icon: Icons.volume_up_rounded,
+                color: AppTheme.warningOrange,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatusCard(
-            title: 'Sound Hazard',
-            count: controller.soundAlerts.length,
-            icon: Icons.volume_up_rounded,
-            color: AppTheme.warningOrange,
-          ),
+        const SizedBox(height: 12),
+        // ✅ NEW: Cry Detection Status Card
+        _buildStatusCard(
+          title: 'Cry Detection',
+          count: controller.cryAlerts.length,
+          icon: Icons.child_care_rounded,
+          color: const Color(0xFFFF6B9D),
+          fullWidth: true,
         ),
       ],
     );
@@ -144,6 +159,7 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
     required int count,
     required IconData icon,
     required Color color,
+    bool fullWidth = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -167,7 +183,37 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: fullWidth
+          ? Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withOpacity(0.2),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTheme.bodySmall,
+              ),
+              Text(
+                '$count',
+                style: AppTheme.headingLarge.copyWith(
+                  fontSize: 28,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ],
+      )
+          : Column(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
@@ -286,6 +332,55 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
     );
   }
 
+  // ✅ NEW: Cry Detection Section
+  Widget _buildCryDetectionSection(SafetyMonitoringController controller) {
+    const cryColor = Color(0xFFFF6B9D);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cryColor.withOpacity(0.2),
+              ),
+              child: const Icon(
+                Icons.child_care_rounded,
+                color: cryColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Cry Detection Alerts',
+              style: AppTheme.headingMedium,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        controller.cryAlerts.isEmpty
+            ? _buildEmptyState('No cry detection alerts')
+            : Column(
+          children: controller.cryAlerts
+              .map((alert) => _buildAlertCard(
+            alert: alert,
+            controller: controller,
+            colors: [
+              cryColor.withOpacity(0.1),
+              cryColor.withOpacity(0.05),
+            ],
+            icon: Icons.child_care_rounded,
+            iconColor: cryColor,
+          ))
+              .toList(),
+        ),
+      ],
+    );
+  }
+
   Widget _buildAlertCard({
     required Map<String, dynamic> alert,
     required SafetyMonitoringController controller,
@@ -354,7 +449,9 @@ class ChildSafetyMonitoringScreen extends StatelessWidget {
                         color: iconColor.withOpacity(0.2),
                       ),
                       child: Text(
-                        alert['status'] == 'ACTIVE' ? 'ACTIVE' : 'RESOLVED',
+                        alert['status'] == 'active' || alert['status'] == 'ACTIVE'
+                            ? 'ACTIVE'
+                            : 'RESOLVED',
                         style: AppTheme.labelText.copyWith(
                           color: iconColor,
                           fontSize: 10,

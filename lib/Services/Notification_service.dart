@@ -7,16 +7,13 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
 
-  // Initialize notifications with permission request
   static Future<bool> initializeNotifications() async {
     try {
       print('📱 Initializing notification service...');
 
-      // ✅ Android initialization with color settings
       const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
-      // iOS initialization with permission requests
       const DarwinInitializationSettings initializationSettingsIOS =
       DarwinInitializationSettings(
         requestAlertPermission: true,
@@ -41,7 +38,6 @@ class NotificationService {
 
       print('✅ Notification initialization result: $initialized');
 
-      // Request permissions
       await _requestPermissions();
 
       return initialized ?? false;
@@ -51,18 +47,15 @@ class NotificationService {
     }
   }
 
-  // ✅ Background notification handler
   @pragma('vm:entry-point')
   static void notificationTapBackground(NotificationResponse notificationResponse) {
     print('🎯 Background notification tapped: ${notificationResponse.payload}');
   }
 
-  // Request notification permissions
   static Future<bool> _requestPermissions() async {
     try {
       print('🔔 Requesting notification permissions...');
 
-      // For Android 13+ (API level 33+)
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
       flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
@@ -73,7 +66,6 @@ class NotificationService {
         print('✅ Android notification permission: $granted');
       }
 
-      // For iOS
       final bool? result = await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin>()
@@ -93,7 +85,6 @@ class NotificationService {
     }
   }
 
-  // Check if notifications are enabled
   static Future<bool> areNotificationsEnabled() async {
     try {
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
@@ -114,7 +105,6 @@ class NotificationService {
     }
   }
 
-  // ✅ IMPROVED: Show proximity alert notification with color dot
   static Future<void> showProximityAlert({
     required String message,
     required String alertId,
@@ -133,14 +123,12 @@ class NotificationService {
         enableVibration: true,
         enableLights: true,
         fullScreenIntent: true,
-        // ✅ KEY: Set color using Android color resource
-        color: Color(0xFF4A90C2),  // Sky Blue - matches colors.xml
-        colorized: true,            // ✅ Makes color more visible
+        color: Color(0xFF4A90C2),
+        colorized: true,
         icon: '@mipmap/ic_launcher',
         ongoing: false,
         autoCancel: true,
         showWhen: true,
-        // ✅ Add style for better visual appearance
         styleInformation: const BigTextStyleInformation(
           'Proximity Hazard Detected!',
           contentTitle: '🚨 Safety Alert',
@@ -154,7 +142,6 @@ class NotificationService {
         presentSound: true,
         sound: 'default',
         interruptionLevel: InterruptionLevel.timeSensitive,
-        // ✅ iOS color support
         threadIdentifier: 'proximity_alerts',
       );
 
@@ -178,7 +165,6 @@ class NotificationService {
     }
   }
 
-  // ✅ IMPROVED: Show sound hazard notification with color dot
   static Future<void> showSoundHazardAlert({
     required String message,
     required String alertId,
@@ -197,14 +183,12 @@ class NotificationService {
         enableVibration: true,
         enableLights: true,
         fullScreenIntent: true,
-        // ✅ KEY: Set color using Android color resource
-        color: Color(0xFFFFA500),  // Orange - warning color
-        colorized: true,            // ✅ Makes color more visible
+        color: Color(0xFFFFA500),
+        colorized: true,
         icon: '@mipmap/ic_launcher',
         ongoing: false,
         autoCancel: true,
         showWhen: true,
-        // ✅ Add style for better visual appearance
         styleInformation: const BigTextStyleInformation(
           'Sound Hazard Detected!',
           contentTitle: '🔊 Safety Alert',
@@ -218,7 +202,6 @@ class NotificationService {
         presentSound: true,
         sound: 'default',
         interruptionLevel: InterruptionLevel.timeSensitive,
-        // ✅ iOS color support
         threadIdentifier: 'sound_hazard_alerts',
       );
 
@@ -242,7 +225,67 @@ class NotificationService {
     }
   }
 
-  // Cancel notification
+  // ✅ NEW: Cry Detection Alert
+  static Future<void> showCryDetectionAlert({
+    required String message,
+    required String alertId,
+  }) async {
+    try {
+      print('👶 Showing cry detection alert: $message');
+
+      const AndroidNotificationDetails androidDetails =
+      AndroidNotificationDetails(
+        'cry_detection_alerts',
+        'Cry Detection Alerts',
+        channelDescription: 'Notifications for child cry detection',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        fullScreenIntent: true,
+        color: Color(0xFFFF6B9D), // Pink/magenta for child-related alerts
+        colorized: true,
+        icon: '@mipmap/ic_launcher',
+        ongoing: false,
+        autoCancel: true,
+        showWhen: true,
+        styleInformation: const BigTextStyleInformation(
+          'Child Cry Detected!',
+          contentTitle: '👶 Cry Alert',
+          summaryText: 'Tap to view details',
+        ),
+      );
+
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'default',
+        interruptionLevel: InterruptionLevel.timeSensitive,
+        threadIdentifier: 'cry_detection_alerts',
+      );
+
+      const NotificationDetails notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await flutterLocalNotificationsPlugin.show(
+        alertId.hashCode,
+        '👶 Cry Detection Alert',
+        message,
+        notificationDetails,
+        payload: alertId,
+      );
+
+      print('✅ Cry detection alert shown successfully');
+    } catch (e) {
+      print('❌ Error showing cry detection alert: $e');
+      rethrow;
+    }
+  }
+
   static Future<void> cancelNotification(String alertId) async {
     try {
       await flutterLocalNotificationsPlugin.cancel(alertId.hashCode);
@@ -252,7 +295,6 @@ class NotificationService {
     }
   }
 
-  // Cancel all notifications
   static Future<void> cancelAllNotifications() async {
     try {
       await flutterLocalNotificationsPlugin.cancelAll();
@@ -262,7 +304,6 @@ class NotificationService {
     }
   }
 
-  // Get pending notifications count
   static Future<int> getPendingNotificationCount() async {
     try {
       final List<PendingNotificationRequest> pendingNotifications =
